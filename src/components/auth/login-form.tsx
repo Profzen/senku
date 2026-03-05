@@ -32,7 +32,11 @@ export function LoginForm({ initialEmail = "", initialReason = "" }: LoginFormPr
       });
 
       if (result?.error || result?.ok === false) {
-        setError("Email ou mot de passe invalide.");
+        if (result?.error === "CredentialsSignin") {
+          setError("Email ou mot de passe invalide.");
+        } else {
+          setError("Erreur d'authentification serveur. Vérifie la configuration de production.");
+        }
         return;
       }
 
