@@ -1,7 +1,7 @@
 "use client";
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
-import { Activity, ArrowDownRight, ArrowUpRight, ShieldAlert, Target, TrendingUp } from "lucide-react";
+import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BrainCircuit, ShieldAlert, Target, TrendingUp } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -16,7 +16,34 @@ type StatsPayload = {
     profitFactor: number;
     currentDrawdown: number;
     tradeCount: number;
+    disciplineScore: number;
   };
+  discipline: {
+    score: number;
+    planFollowRate: number;
+    emotionalControl: number;
+    revengeCount: number;
+    fomoCount: number;
+    entries: number;
+  };
+  preferences?: {
+    notifications: boolean;
+  };
+  propFirm: {
+    enabled: boolean;
+    dailyLossPercent: number;
+    totalDrawdownPercent: number;
+    maxDailyDrawdown: number;
+    maxTotalDrawdown: number;
+    dailyAlert: boolean;
+    totalAlert: boolean;
+    objectiveProgress: number;
+    objectiveRemaining: number;
+    currentBalance: number;
+    targetBalance: number;
+    accountName: string;
+    currency: string;
+  } | null;
   equityCurve: Array<{ date: string; balance: number }>;
   strategyBreakdown: Array<{ name: string; value: number }>;
   sessionBreakdown: Array<{ name: string; value: number }>;
@@ -58,11 +85,15 @@ export function DashboardPageClient() {
         return;
       }
       const body = await response.json();
-      setAccounts(body.data ?? []);
+      const loadedAccounts = body.data ?? [];
+      setAccounts(loadedAccounts);
+      if (!accountId && loadedAccounts.length) {
+        setAccountId(loadedAccounts[0]._id);
+      }
     };
 
     void loadAccounts();
-  }, []);
+  }, [accountId]);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -110,9 +141,12 @@ export function DashboardPageClient() {
         profitFactor: 0,
         currentDrawdown: 0,
         tradeCount: 0,
+        disciplineScore: 0,
       },
     [stats],
   );
+
+  const propFirm = stats?.propFirm;
 
   return (
     <div className="space-y-4">
@@ -157,7 +191,48 @@ export function DashboardPageClient() {
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {stats?.preferences?.notifications !== false && propFirm?.enabled && (propFirm.dailyAlert || propFirm.totalAlert) && (
+        <section className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3">
+          <div className="flex items-start gap-2 text-rose-200">
+            <AlertTriangle className="mt-0.5 h-4 w-4" />
+            <div className="text-sm">
+              <p className="font-medium">Alerte conformité Prop Firm</p>
+              <p className="text-xs text-rose-200/90">
+                {propFirm.dailyAlert
+                  ? `Drawdown journalier ${propFirm.dailyLossPercent.toFixed(2)}% / limite ${propFirm.maxDailyDrawdown.toFixed(2)}%`
+                  : null}
+                {propFirm.dailyAlert && propFirm.totalAlert ? " · " : ""}
+                {propFirm.totalAlert
+                  ? `Drawdown global ${propFirm.totalDrawdownPercent.toFixed(2)}% / limite ${propFirm.maxTotalDrawdown.toFixed(2)}%`
+                  : null}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {propFirm?.enabled && (
+        <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Objectif compte Prop Firm</h2>
+              <p className="text-xs text-slate-400">{propFirm.accountName}</p>
+            </div>
+            <span className="font-mono text-sm text-blue-300">{propFirm.objectiveProgress.toFixed(0)}%</span>
+          </div>
+          <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500" style={{ width: `${Math.max(0, Math.min(100, propFirm.objectiveProgress))}%` }} />
+          </div>
+          <div className="grid gap-2 text-xs text-slate-300 md:grid-cols-4">
+            <p>Actuel: <span className="font-mono">{formatMoney(propFirm.currentBalance)}</span></p>
+            <p>Cible: <span className="font-mono">{formatMoney(propFirm.targetBalance)}</span></p>
+            <p>Restant: <span className="font-mono text-amber-300">{formatMoney(propFirm.objectiveRemaining)}</span></p>
+            <p>DD global: <span className="font-mono text-rose-300">{propFirm.totalDrawdownPercent.toFixed(2)}%</span></p>
+          </div>
+        </section>
+      )}
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
           <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
             <span>Solde actuel</span>
@@ -196,6 +271,14 @@ export function DashboardPageClient() {
             <ShieldAlert className="h-4 w-4 text-rose-500" />
           </div>
           <p className="font-mono text-lg text-rose-400">-{kpis.currentDrawdown.toFixed(2)}%</p>
+        </article>
+
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+            <span>Score discipline</span>
+            <BrainCircuit className="h-4 w-4 text-violet-400" />
+          </div>
+          <p className="font-mono text-lg text-violet-300">{kpis.disciplineScore.toFixed(0)} / 100</p>
         </article>
       </section>
 

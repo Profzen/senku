@@ -36,4 +36,5 @@ export interface DashboardKpis {
   profitFactor: number;
   currentDrawdown: number;
   tradeCount: number;
+  disciplineScore: number;
 }

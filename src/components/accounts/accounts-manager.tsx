@@ -13,6 +13,8 @@ type Account = {
   initialBalance: number;
   currentBalance: number;
   targetBalance?: number;
+  maxDailyDrawdown?: number;
+  maxTotalDrawdown?: number;
   status: "active" | "inactive" | "passed" | "failed";
 };
 
@@ -23,6 +25,8 @@ type AccountForm = {
   currency: string;
   initialBalance: number;
   targetBalance: number;
+  maxDailyDrawdown: number;
+  maxTotalDrawdown: number;
   status: Account["status"];
 };
 
@@ -33,6 +37,8 @@ const initialForm: AccountForm = {
   currency: "USD",
   initialBalance: 10000,
   targetBalance: 11000,
+  maxDailyDrawdown: 5,
+  maxTotalDrawdown: 10,
   status: "active",
 };
 
@@ -103,6 +109,8 @@ export function AccountsManager() {
       currency: account.currency,
       initialBalance: account.initialBalance,
       targetBalance: account.targetBalance ?? account.initialBalance,
+      maxDailyDrawdown: account.maxDailyDrawdown ?? 5,
+      maxTotalDrawdown: account.maxTotalDrawdown ?? 10,
       status: account.status,
     });
   };
@@ -162,6 +170,27 @@ export function AccountsManager() {
             <input
               type="number"
               min={0}
+              step="0.1"
+              value={form.maxDailyDrawdown}
+              onChange={(event) => setForm((prev) => ({ ...prev, maxDailyDrawdown: Number(event.target.value) }))}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+              title="Drawdown journalier max (%)"
+            />
+            <input
+              type="number"
+              min={0}
+              step="0.1"
+              value={form.maxTotalDrawdown}
+              onChange={(event) => setForm((prev) => ({ ...prev, maxTotalDrawdown: Number(event.target.value) }))}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+              title="Drawdown global max (%)"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              min={0}
               value={form.initialBalance}
               onChange={(event) => setForm((prev) => ({ ...prev, initialBalance: Number(event.target.value) }))}
               className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
@@ -204,6 +233,7 @@ export function AccountsManager() {
                 <th className="px-4 py-3">Solde initial</th>
                 <th className="px-4 py-3">Solde actuel</th>
                 <th className="px-4 py-3">Statut</th>
+                <th className="px-4 py-3">Règles DD</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -216,6 +246,9 @@ export function AccountsManager() {
                   <td className="px-4 py-3 font-mono">{money(account.initialBalance, account.currency)}</td>
                   <td className="px-4 py-3 font-mono">{money(account.currentBalance, account.currency)}</td>
                   <td className="px-4 py-3 uppercase text-xs">{account.status}</td>
+                  <td className="px-4 py-3 text-xs text-slate-300">
+                    J: {account.maxDailyDrawdown ?? 0}% · G: {account.maxTotalDrawdown ?? 0}%
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => onEdit(account)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
@@ -230,7 +263,7 @@ export function AccountsManager() {
               ))}
               {!accounts.length && (
                 <tr>
-                  <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={7}>
+                  <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={8}>
                     Aucun compte trouvé.
                   </td>
                 </tr>

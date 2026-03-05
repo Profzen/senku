@@ -15,7 +15,31 @@ type StatsPayload = {
     profitFactor: number;
     currentDrawdown: number;
     tradeCount: number;
+    disciplineScore: number;
   };
+  discipline: {
+    score: number;
+    planFollowRate: number;
+    emotionalControl: number;
+    revengeCount: number;
+    fomoCount: number;
+    entries: number;
+  };
+  propFirm: {
+    enabled: boolean;
+    dailyLossPercent: number;
+    totalDrawdownPercent: number;
+    maxDailyDrawdown: number;
+    maxTotalDrawdown: number;
+    dailyAlert: boolean;
+    totalAlert: boolean;
+    objectiveProgress: number;
+    objectiveRemaining: number;
+    currentBalance: number;
+    targetBalance: number;
+    accountName: string;
+    currency: string;
+  } | null;
   equityCurve: Array<{ date: string; balance: number }>;
   strategyBreakdown: Array<{ name: string; value: number }>;
   sessionBreakdown: Array<{ name: string; value: number }>;
@@ -102,6 +126,47 @@ export function StatsClient() {
       </section>
 
       <DashboardCharts equityCurve={stats?.equityCurve ?? []} strategyBreakdown={stats?.strategyBreakdown ?? []} sessionBreakdown={stats?.sessionBreakdown ?? []} />
+
+      {stats?.propFirm?.enabled && (
+        <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Conformité Prop Firm</h2>
+            <span className="font-mono text-sm text-blue-300">{stats.propFirm.objectiveProgress.toFixed(0)}%</span>
+          </div>
+          <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500" style={{ width: `${Math.max(0, Math.min(100, stats.propFirm.objectiveProgress))}%` }} />
+          </div>
+          <div className="grid gap-2 text-xs text-slate-300 md:grid-cols-4">
+            <p>DD journalier: {stats.propFirm.dailyLossPercent.toFixed(2)}% / {stats.propFirm.maxDailyDrawdown.toFixed(2)}%</p>
+            <p>DD global: {stats.propFirm.totalDrawdownPercent.toFixed(2)}% / {stats.propFirm.maxTotalDrawdown.toFixed(2)}%</p>
+            <p>Actuel: {stats.propFirm.currentBalance.toFixed(0)}</p>
+            <p>Restant: {stats.propFirm.objectiveRemaining.toFixed(0)}</p>
+          </div>
+        </section>
+      )}
+
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p className="text-xs text-slate-400">Score discipline</p>
+          <p className="mt-2 font-mono text-lg text-violet-300">{(stats?.discipline.score ?? 0).toFixed(0)} / 100</p>
+        </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p className="text-xs text-slate-400">Respect du plan</p>
+          <p className="mt-2 font-mono text-lg">{(stats?.discipline.planFollowRate ?? 0).toFixed(0)}%</p>
+        </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p className="text-xs text-slate-400">Contrôle émotionnel</p>
+          <p className="mt-2 font-mono text-lg">{(stats?.discipline.emotionalControl ?? 0).toFixed(0)}%</p>
+        </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p className="text-xs text-slate-400">Revenge trading</p>
+          <p className="mt-2 font-mono text-lg text-rose-300">{stats?.discipline.revengeCount ?? 0}</p>
+        </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+          <p className="text-xs text-slate-400">FOMO détecté</p>
+          <p className="mt-2 font-mono text-lg text-amber-300">{stats?.discipline.fomoCount ?? 0}</p>
+        </article>
+      </section>
 
       <section className="rounded-xl border border-slate-800 bg-slate-900">
         <div className="border-b border-slate-800 px-4 py-3 text-sm font-semibold">Classement stratégies</div>

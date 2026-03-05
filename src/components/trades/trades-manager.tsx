@@ -3,6 +3,7 @@
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { exportTradesCsv, exportTradesPdf, exportTradesXlsx } from "@/lib/client-trade-exports";
 
 type Account = { _id: string; name: string; currency: string };
 
@@ -166,7 +167,32 @@ export function TradesManager() {
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-        <h2 className="mb-3 text-sm font-semibold">Filtres trades</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Filtres trades</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => exportTradesCsv(trades)}
+              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
+            >
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => exportTradesXlsx(trades)}
+              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
+            >
+              Export Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => exportTradesPdf(trades)}
+              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
+            >
+              Export PDF
+            </button>
+          </div>
+        </div>
         <div className="grid gap-2 md:grid-cols-4">
           <select value={filterAccountId} onChange={(event) => setFilterAccountId(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
             <option value="">Tous les comptes</option>
