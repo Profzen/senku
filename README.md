@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Senku
 
-## Getting Started
+Plateforme SaaS de journal de trading (Next.js + MongoDB) basée sur le cahier des charges fourni.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router, TypeScript)
+- Tailwind CSS
+- MongoDB Atlas + Mongoose
+- Recharts
+- Lucide React (icônes pro, sans emoji)
+
+## Démarrage local
+
+1. Vérifier le fichier `.env`:
+
+```dotenv
+MONGODB_URI=...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=http://localhost:3000
+```
+
+2. Installer les dépendances:
+
+```bash
+npm install
+```
+
+3. Lancer le projet:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Ouvrir:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Dashboard: `http://localhost:3000/dashboard`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Seed de données de démo
 
-## Learn More
+Pour injecter un compte + des trades de démo dans MongoDB:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+curl -X POST http://localhost:3000/api/seed
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Ensuite recharger `http://localhost:3000/dashboard`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API disponibles
 
-## Deploy on Vercel
+- `GET/POST /api/accounts`
+- `GET/PATCH/DELETE /api/accounts/[id]`
+- `GET/POST /api/trades`
+- `GET/PATCH/DELETE /api/trades/[id]`
+- `GET /api/stats`
+- `POST /api/seed`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Statut actuel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Implémenté:
+
+- Architecture projet Senku
+- Connexion MongoDB
+- Modèles Mongoose: User, Account, Trade, Strategy
+- Validation Zod des payloads principaux
+- API CRUD de base (accounts, trades)
+- API stats dashboard
+- Dashboard UI initial avec KPI + charts + table trades
+
+À implémenter (prochaines phases):
+
+- Auth complète (NextAuth + JWT)
+- Formulaires UI complets (ajout/edit trades/comptes)
+- Journal psychologique avancé + score discipline dynamique
+- Filtres avancés et export CSV/Excel/PDF
+- Module statistiques avancées complet

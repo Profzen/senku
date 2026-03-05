@@ -1,0 +1,60 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function OnboardingAccountStep() {
+  const router = useRouter();
+  const [name, setName] = useState("Mon compte");
+  const [broker, setBroker] = useState("FTMO");
+  const [initialBalance, setInitialBalance] = useState(10000);
+  const [targetBalance, setTargetBalance] = useState(11000);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const response = await fetch("/api/accounts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        broker,
+        type: "challenge",
+        currency: "USD",
+        initialBalance,
+        targetBalance,
+        status: "active",
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Impossible de créer le compte.");
+      setLoading(false);
+      return;
+    }
+
+    const body = await response.json();
+    const accountId = body?.data?._id;
+    router.push(`/onboarding/trade?accountId=${accountId}`);
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <input value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
+      <input value={broker} onChange={(event) => setBroker(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
+      <div className="grid grid-cols-2 gap-2">
+        <input type="number" min={0} value={initialBalance} onChange={(event) => setInitialBalance(Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
+        <input type="number" min={0} value={targetBalance} onChange={(event) => setTargetBalance(Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
+      </div>
+      {error && <p className="text-xs text-rose-400">{error}</p>}
+      <button type="submit" disabled={loading} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
+        {loading ? "Création..." : "Créer mon compte"}
+      </button>
+    </form>
+  );
+}
