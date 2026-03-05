@@ -1,0 +1,386 @@
+
+TRADEPULSE
+Journal de Trading Professionnel & Intelligent
+CAHIER DES CHARGES COMPLET
+Version 2.0  —  Document de spécification technique
+Suivi • Analyse • Performance • Stratégie
+
+2025
+
+Table des matières
+Table des matières	2
+1. Vision & Positionnement du Projet	4
+1.1 Problèmes résolus	4
+1.2 Proposition de valeur	4
+2. Fonctionnalités Principales	4
+2.1 Gestion des utilisateurs	4
+2.2 Gestion multi-comptes de trading	5
+Informations d’un compte	5
+2.3 Module d’enregistrement des trades	5
+2.4 Journal psychologique du trader	6
+2.5 Gestion des objectifs & suivi des règles Prop Firm	6
+3. Dashboard Principal — Architecture UI	6
+3.1 Vue d’ensemble de la navigation	6
+3.2 Cartes KPI principales	7
+3.3 Graphiques du Dashboard	7
+4. Module Statistiques Avancées	8
+4.1 Analyse par stratégie	8
+4.2 Analyse par instrument	8
+4.3 Analyse par heure de trading	8
+4.4 Métriques de risk management	9
+4.5 Filtres avancés	9
+5. Architecture Technique	9
+5.1 Stack technologique	9
+5.2 Structure du projet Next.js	10
+5.3 Modèles de données MongoDB	11
+Collection users	11
+Collection accounts	11
+Collection trades	11
+Collection strategies	11
+5.4 Index MongoDB optimisés	12
+6. Design UI / UX	12
+6.1 Système de design	12
+6.2 Typographie	12
+6.3 Composants clés	13
+7. Plan de Développement	13
+8. Feuille de Route — Fonctionnalités Futures	13
+8.1 Court terme (v1.5)	13
+8.2 Moyen terme (v2.0)	14
+8.3 Long terme (SaaS v3.0)	14
+Conclusion	14
+
+
+1. Vision & Positionnement du Projet
+
+TradePulse est une plateforme web SaaS de journal de trading conçue pour les traders indépendants souhaitant améliorer leur performance grâce à une analyse data-driven de leurs activités. Elle remplace les suivis manuels (Excel, Word) par un système intelligent intégré.
+
+1.1 Problèmes résolus
+•	Suivi manuel fastidieux et source d’erreurs
+•	Absence de statistiques automatisées et temps réel
+•	Impossibilité de visualiser l’évolution du capital et du drawdown
+•	Manque d’outils d’identification des patterns gagnants / perdants
+•	Aucune dimension psychologique intégrée au suivi
+
+1.2 Proposition de valeur
+
+🎯 Valeur ajoutée clé
+→ Analyse statistique automatique de chaque trade enregistré
+→ Identification des patterns rentables par stratégie, paire, session et heure
+→ Journal psychologique pour comprendre et corriger ses biais émotionnels
+→ Suivi multi-comptes avec objectifs personnalisés
+→ Tableaux de bord visuels en temps réel
+
+2. Fonctionnalités Principales
+
+2.1 Gestion des utilisateurs
+•	Inscription / Connexion sécurisée (email + mot de passe)
+•	Authentification JWT avec refresh token
+•	Récupération de mot de passe par email
+•	Profil personnalisable (avatar, fuseau horaire, devise de référence)
+•	Gestion des préférences d’affichage
+
+2.2 Gestion multi-comptes de trading
+Un utilisateur peut gérer plusieurs comptes de trading de types différents :
+
+Type de compte	Exemples	Spécificités
+Compte personnel	Compte chez un broker	Pas de règles imposées
+Compte Prop Firm	FTMO, MyForexFunds	Règles drawdown strictes
+Compte Challenge	Phase 1 & 2 FTMO	Objectifs de profit définis
+Compte Virtuel	Compte papier trading	Simulation sans risque réel
+
+Informations d’un compte
+•	Nom du compte, broker, devise
+•	Solde initial, solde actuel, objectif cible
+•	Drawdown maximum autorisé (pour Prop Firms)
+•	Date de création, statut (Actif / Inactif / Passé / Échoué)
+•	Règles personnalisées (max lots, max trades/jour, jours de trading)
+
+2.3 Module d’enregistrement des trades
+
+Champ	Type	Description	Requis
+Date & Heure	DateTime	Date d’entrée en position	Oui
+Paire / Instrument	Select	Ex. EURUSD, XAUUSD, NAS100	Oui
+Type d’ordre	Select	Buy / Sell	Oui
+Lot size	Decimal	Volume de la position	Oui
+Setup	Text	Nom du setup utilisé	Oui
+Stratégie	Select	Breakout, Liquidity, Reversal...	Oui
+Session	Select	Asie / Londres / New-York	Oui
+Risk % (RPT)	Decimal	Pourcentage du capital risqué	Oui
+Risk/Reward	Decimal	Ratio RR visé avant entrée	Oui
+Issue	Select	TP / SL / BE / Partiel / Manuel	Oui
+Résultat $	Decimal	P&L en devise du compte	Oui
+Résultat %	Decimal	P&L en % du capital	Oui
+Capture écran	Image	Screenshot du trade	Non
+Observation	Textarea	Analyse post-trade	Non
+
+2.4 Journal psychologique du trader
+Chaque trade peut être enrichi d’une entrée psychologique pour identifier les biais cognitifs et améliorer la discipline :
+
+•	État émotionnel avant le trade (slider 1-10 : calme → stressé)
+•	État de confiance dans le setup (faible / moyen / élevé)
+•	Respect du plan de trading (Oui / Non / Partiel)
+•	Erreur identifiée (FOMO, revenge trading, trop tôt sorti...)
+•	Leçon apprise
+•	Humeur générale de la session
+
+💡 Fonctionnalité avancée : Score Psychologique
+Un score de discipline est calculé automatiquement sur la semaine et le mois,
+basé sur le respect du plan, l’absence de revenge trading et la gestion émotionnelle.
+Ce score est affiché sur le dashboard principal.
+
+2.5 Gestion des objectifs & suivi des règles Prop Firm
+•	Définition d’un objectif de profit par compte (ex. +10% en 30 jours)
+•	Drawdown daily maximum (ex. -5% / jour)
+•	Drawdown global maximum (ex. -10% du capital)
+•	Alertes automatiques quand on approche des limites
+•	Barre de progression visuelle vers l’objectif
+•	Tableau de bord dédié Prop Firm avec indicateurs de conformité
+
+3. Dashboard Principal — Architecture UI
+
+3.1 Vue d’ensemble de la navigation
+La plateforme est articulée autour d’une sidebar de navigation permanente et d’une zone de contenu principale responsive.
+
+Section	Icône	Description
+Dashboard	📊	Vue globale, KPIs, equity curve, trades récents
+Comptes	🏦	Gestion des comptes de trading
+Trades	📝	Historique, ajout, filtre avancé
+Journal	🗣️	Entrées psychologiques, réflexions
+Statistiques	🔍	Analyses avancées multi-dimensions
+Stratégies	⚙️	Gestion et performance par setup
+Calendrier	📅	Heatmap des jours de trading
+Paramètres	🛠️	Profil, préférences, export
+
+3.2 Cartes KPI principales
+
+KPI	Calcul	Couleur
+Solde actuel	Initial + sum(résultats)	Bleu
+Profit total	sum(trades positifs)	Vert
+Perte totale	sum(trades négatifs)	Rouge
+P&L net	Profit – Pertes	Vert / Rouge
+Win Rate	Trades gagnants / Total	Bleu
+Avg Risk/Reward	Moyenne des RR réalisés	Violet
+Profit Factor	Gross Profit / Gross Loss	Orange
+Drawdown actuel	Pic – valle actuelle	Rouge
+Score Discipline	Algorithme psycho	Violet
+Nombre de trades	Count trades	Gris
+
+3.3 Graphiques du Dashboard
+
+Graphique	Type	Description
+Courbe d’équité	Line chart	Évolution du capital avec drawdown en overlay
+Profit par jour	Bar chart	Histogramme quotidien positif/négatif
+Performance mensuelle	Bar grouped	Comparatif mois par mois
+Distribution gains/pertes	Donut chart	Répartition visuelle
+Heatmap journalière	Calendar heatmap	Jours verts/rouges comme GitHub
+Trades par session	Radar chart	Asie / Londres / New-York
+Drawdown chart	Area chart	Profondeur et durée des drawdowns
+Progression objectif	Progress ring	% accompli vers l’objectif
+
+4. Module Statistiques Avancées
+
+4.1 Analyse par stratégie
+Permet d’identifier les setups les plus rentables et d’éliminer les approches négatives.
+
+Stratégie	Trades	Win Rate	Profit Net	Avg RR	Profit Factor
+Breakout	14	71%	+240$	1.8	2.4
+Liquidity Grab	10	60%	+90$	2.1	1.9
+Reversal	6	33%	-20$	0.9	0.6
+Trend Follow	8	75%	+180$	2.4	3.1
+
+4.2 Analyse par instrument
+Paire	Trades	Win Rate	Profit Net	Meilleure heure
+EURUSD	12	70%	+145$	10h00
+GBPUSD	9	55%	+60$	09h00
+XAUUSD	8	62%	+220$	15h30
+NAS100	5	40%	-45$	—
+GBPCHF	4	50%	+30$	08h00
+
+4.3 Analyse par heure de trading
+Tranche horaire	Session	Trades	Profit Net	Win Rate
+07h00 – 09h00	Ouverture Londres	18	+120$	66%
+09h00 – 12h00	Londres actif	22	+195$	72%
+12h00 – 14h00	Overlap	8	-30$	37%
+14h00 – 17h00	New-York ouverture	15	+210$	73%
+17h00 – 21h00	New-York actif	10	+55$	60%
+
+4.4 Métriques de risk management
+•	Drawdown maximum historique
+•	Drawdown actuel (depuis dernier pic)
+•	Ratio Calmar (return annuel / max drawdown)
+•	Ratio de Sharpe (performance ajustée au risque)
+•	Consecutive losses maximum
+•	Average holding time (durée moyenne d’un trade)
+•	Récupération moyenne après drawdown
+
+4.5 Filtres avancés
+Les trades peuvent être filtrés et analysés selon :
+•	Période (date de début / fin)
+•	Paire ou groupe de paires
+•	Stratégie / Setup
+•	Session de trading
+•	Issue (TP / SL / BE / Manuel)
+•	Type d’ordre (Buy / Sell)
+•	Résultat (gagnant / perdant / breakeven)
+•	État psychologique
+
+5. Architecture Technique
+
+5.1 Stack technologique
+
+Couche	Technologie	Justification
+Frontend	Next.js 14 + React 18	SSR, App Router, performances optimales
+Styling	TailwindCSS + shadcn/ui	Design system cohérent et rapide
+Graphiques	Recharts + Tremor	Composants data viz adaptés SaaS
+Backend	API Routes Next.js	Serverless, intégré au frontend
+Base de données	MongoDB Atlas	Flexible pour structures de trades
+ORM	Mongoose	Schémas validés + index optimisés
+Auth	NextAuth.js + JWT	Sessions sécurisées, OAuth possible
+Upload fichiers	Cloudinary ou UploadThing	Stockage screenshots de trades
+Email	Resend ou Nodemailer	Notifications et récupération MDP
+Déploiement	Vercel	Préféré pour Next.js, auto-scaling
+
+5.2 Structure du projet Next.js
+
+📁 Arborescence recommandée
+/src
+  /app
+    /(auth)          → Login, Register, Reset
+    /(dashboard)     → Layout avec sidebar
+      /dashboard     → Vue principale
+      /accounts      → Gestion comptes
+      /trades        → Liste + ajout
+      /stats         → Analyses avancées
+      /journal       → Journal psychologique
+      /strategies    → Gestion stratégies
+      /calendar      → Heatmap
+      /settings      → Profil + préférences
+  /components
+    /ui               → shadcn/ui components
+    /charts           → Composants graphiques
+    /trades           → TradeForm, TradeTable, TradeCard
+    /dashboard        → KPICard, EquityCurve, RecentTrades
+    /filters          → FilterPanel, DateRangePicker
+  /lib
+    mongodb.ts        → Connexion DB
+    auth.ts           • NextAuth config
+    calculations.ts   → Fonctions statistiques
+    validators.ts     → Zod schemas
+  /models
+    User.ts, Account.ts, Trade.ts, Strategy.ts
+  /api
+    /accounts, /trades, /stats, /auth
+  /types              → TypeScript interfaces
+  /hooks              → useTrades, useStats, useAccount
+
+5.3 Modèles de données MongoDB
+
+Collection users
+Schéma User
+{ _id, name, email, passwordHash, avatar, timezone, currency,
+  preferences: { theme, dateFormat, notifications }, createdAt, updatedAt }
+
+Collection accounts
+Schéma Account
+{ _id, userId, name, broker, type, currency,
+  initialBalance, currentBalance, targetBalance,
+  maxDailyDrawdown, maxTotalDrawdown,
+  status: 'active'|'inactive'|'passed'|'failed',
+  rules: { maxLots, maxTradesPerDay, tradingDays[] },
+  createdAt, updatedAt }
+
+Collection trades
+Schéma Trade
+{ _id, accountId, userId,
+  date, pair, orderType, lot, session,
+  setup, strategy, rpt, rrRatio,
+  issue, resultPercent, resultDollar,
+  screenshots: [url],
+  psychology: { emotionalState, confidence, planFollowed,
+    error, lesson, mood },
+  observation, tags: [],
+  createdAt, updatedAt }
+
+Collection strategies
+Schéma Strategy
+{ _id, userId, name, description, rules: [],
+  pairs: [], timeframes: [], active: bool, createdAt }
+
+5.4 Index MongoDB optimisés
+•	{ accountId: 1, date: -1 } — listing des trades
+•	{ userId: 1, date: -1 } — dashboard global
+•	{ accountId: 1, pair: 1 } — analyse par paire
+•	{ accountId: 1, strategy: 1 } — analyse par stratégie
+•	{ accountId: 1, resultDollar: 1 } — classements
+
+6. Design UI / UX
+
+6.1 Système de design
+
+Variable	Valeur HEX	Usage
+Primary	#2563EB	CTA, liens actifs, titres accentés
+Secondary	#7C3AED	Score psychologique, badges
+Success	#16A34A	Profits, trades positifs
+Danger	#DC2626	Pertes, alertes, drawdown
+Warning	#D97706	Alertes approche limites
+Background	#0F172A	Fond principal (dark mode)
+Card	#1E293B	Fond des cartes
+Border	#334155	Bordures subtiles
+Text primary	#F1F5F9	Texte principal
+Text secondary	#94A3B8	Texte secondaire, labels
+
+6.2 Typographie
+•	Display (titres héro) : Syne Bold ou DM Sans
+•	Interface (navigation, labels) : Geist Sans
+•	Mono (valeurs numériques, code) : Geist Mono ou JetBrains Mono
+•	Taille base : 14px, line-height : 1.6
+
+6.3 Composants clés
+•	KPICard : carte stat avec icône, valeur, delta, sparkline
+•	EquityCurve : graphique principal avec tooltips interactifs
+•	TradeRow : ligne de trade avec badge couleur issue
+•	FilterPanel : filtres collàpsibles avec chips de filtre actifs
+•	PsychologyModal : formulaire psychologique avec sliders
+•	PropFirmAlert : bannière d’alerte drawdown en temps réel
+•	ProgressRing : anneau de progression vers objectif
+
+7. Plan de Développement
+
+Phase	Contenu	Durée estimée	Priorité
+Phase 1	Init projet : Next.js, MongoDB, structure, CI/CD	3-5 jours	🔴 Critique
+Phase 2	Authentification complète (login, register, session)	3-4 jours	🔴 Critique
+Phase 3	Gestion des comptes CRUD + validation	3-4 jours	🔴 Critique
+Phase 4	Module trades : formulaire, liste, CRUD	5-7 jours	🔴 Critique
+Phase 5	Dashboard KPIs + equity curve basique	4-5 jours	🟠 Haute
+Phase 6	Statistiques avancées multi-dimensions	5-7 jours	🟠 Haute
+Phase 7	Journal psychologique + score discipline	3-4 jours	🟡 Moyenne
+Phase 8	Filtres avancés + export CSV/Excel/PDF	3-4 jours	🟡 Moyenne
+Phase 9	Gestion stratégies + calendrier heatmap	3-4 jours	🟡 Moyenne
+Phase 10	Alertes Prop Firm + optimisation UI	3-5 jours	🟢 Bonus
+
+8. Feuille de Route — Fonctionnalités Futures
+
+8.1 Court terme (v1.5)
+•	Import automatique depuis MT4/MT5 (fichier CSV ou API)
+•	Mode clair (light theme) en option
+•	Notifications push pour alertes drawdown
+•	Comparaison entre deux périodes de trading
+
+8.2 Moyen terme (v2.0)
+•	Analyse IA des patterns de perte (détection automatique de biais)
+•	Intégration webhook broker en temps réel
+•	Application mobile (React Native ou PWA)
+•	Partage de statistiques anonymisées entre traders
+
+8.3 Long terme (SaaS v3.0)
+•	Mode SaaS multi-utilisateurs avec abonnements
+•	Marketplace de stratégies entre traders
+•	Backtesting intégré avec historique de cours
+•	Coach IA personnalisé basé sur l’historique de trading
+
+Conclusion
+
+🎯 Objectif final de TradePulse
+Créer la plateforme de référence pour les traders indépendants, combinant rigueur analytique et intelligence psychologique pour transformer chaque session de trading en opportunité d’apprentissage et de progression.
+✓ Suivi exhaustif  •  ✓ Analyse intelligente  •  ✓ Amélioration continue
+
