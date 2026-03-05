@@ -2,13 +2,10 @@ import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/signout-button";
 import {
-  CalendarDays,
-  ChartColumn,
   ChartNoAxesCombined,
   CircleDollarSign,
   ClipboardList,
   Cog,
-  ShieldCheck,
   WalletCards,
 } from "lucide-react";
 import { getServerSession } from "next-auth";
@@ -16,12 +13,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 const menu = [
-  { href: "/dashboard", label: "Dashboard", icon: ChartNoAxesCombined },
-  { href: "/stats", label: "Statistiques", icon: ChartColumn },
-  { href: "/trades", label: "Trades", icon: ClipboardList },
+  { href: "/dashboard", label: "Tableau de bord", icon: ChartNoAxesCombined },
+  { href: "/trades", label: "Transactions", icon: ClipboardList },
   { href: "/accounts", label: "Comptes", icon: WalletCards },
-  { href: "/journal", label: "Journal", icon: ShieldCheck },
-  { href: "/calendar", label: "Calendrier", icon: CalendarDays },
   { href: "/settings", label: "Paramètres", icon: Cog },
 ];
 
@@ -40,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <CircleDollarSign className="h-5 w-5 text-blue-500" />
             <div>
               <p className="text-base font-bold">Senku</p>
-              <p className="text-xs text-slate-400">Trading Journal</p>
+              <p className="text-xs text-slate-400">Journal de trading</p>
             </div>
           </div>
           <nav className="space-y-1 p-3">

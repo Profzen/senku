@@ -12,12 +12,13 @@ export async function recalculateAccountBalance(accountId: string, userId: strin
       $match: {
         accountId,
         userId,
+        status: "closed",
       },
     },
     {
       $group: {
         _id: null,
-        total: { $sum: "$resultDollar" },
+        total: { $sum: { $ifNull: ["$resultDollar", 0] } },
       },
     },
   ]);

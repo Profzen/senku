@@ -1,11 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { exportTradesCsv, exportTradesPdf, exportTradesXlsx } from "@/lib/client-trade-exports";
 
 type Account = { _id: string; name: string; currency: string };
+
+type TradeStatus = "open" | "closed";
+type CloseReason = "tp" | "sl" | "retractation";
 
 type Trade = {
   _id: string;
@@ -16,14 +19,21 @@ type Trade = {
   lot: number;
   setup: string;
   strategy: string;
-  session: "asia" | "london" | "new-york" | "overlap";
+  rpt: number;
   rrRatio: number;
-  issue: "tp" | "sl" | "be" | "partial" | "manual";
-  resultDollar: number;
-  resultPercent: number;
+  stopLoss?: number;
+  takeProfit?: number;
+  status?: TradeStatus;
+  closeReason?: CloseReason;
+  issue?: string;
+  resultDollar?: number;
+  resultPercent?: number;
+  observation?: string;
+  entryBalance?: number;
+  closedAt?: string;
 };
 
-type TradeForm = {
+type CreateTradeForm = {
   accountId: string;
   date: string;
   pair: string;
@@ -31,44 +41,66 @@ type TradeForm = {
   lot: number;
   setup: string;
   strategy: string;
-  session: "asia" | "london" | "new-york" | "overlap";
   rpt: number;
   rrRatio: number;
-  issue: "tp" | "sl" | "be" | "partial" | "manual";
-  resultDollar: number;
-  resultPercent: number;
+  stopLoss: number;
+  takeProfit: number;
+  observation: string;
 };
 
-const initialForm: TradeForm = {
+type CloseTradeForm = {
+  closeReason: CloseReason;
+  resultDollar: number;
+  observation: string;
+};
+
+const fieldClass = "h-10 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100";
+const buttonBase = "h-10 rounded-lg px-4 text-sm font-medium";
+
+const initialCreateForm: CreateTradeForm = {
   accountId: "",
   date: new Date().toISOString().slice(0, 16),
   pair: "EURUSD",
   orderType: "buy",
   lot: 0.1,
-  setup: "Breakout",
-  strategy: "Breakout",
-  session: "london",
+  setup: "Inversion de structure",
+  strategy: "Price Action",
   rpt: 1,
   rrRatio: 2,
-  issue: "tp",
-  resultDollar: 50,
-  resultPercent: 0.5,
+  stopLoss: 0,
+  takeProfit: 0,
+  observation: "",
 };
 
-const money = (value: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+const initialCloseForm: CloseTradeForm = {
+  closeReason: "tp",
+  resultDollar: 0,
+  observation: "",
+};
+
+const money = (value?: number, currency = "USD") =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 2 }).format(value ?? 0);
 
 export function TradesManager() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [form, setForm] = useState<TradeForm>(initialForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState<CreateTradeForm>(initialCreateForm);
+  const [closeForm, setCloseForm] = useState<CloseTradeForm>(initialCloseForm);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
+  const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [filterAccountId, setFilterAccountId] = useState("");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
   const [filterPair, setFilterPair] = useState("");
-  const [filterStrategy, setFilterStrategy] = useState("");
-  const [filterSession, setFilterSession] = useState("");
+  const [filterOrderType, setFilterOrderType] = useState("");
+  const [filterIssue, setFilterIssue] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("date_desc");
 
   const loadAccounts = useCallback(async () => {
     const response = await fetch("/api/accounts", { cache: "no-store" });
@@ -76,23 +108,26 @@ export function TradesManager() {
     const body = await response.json();
     const items = body.data ?? [];
     setAccounts(items);
-    if (!form.accountId && items.length) {
-      setForm((prev) => ({ ...prev, accountId: items[0]._id }));
+    if (!createForm.accountId && items.length) {
+      setCreateForm((prev) => ({ ...prev, accountId: items[0]._id }));
     }
-  }, [form.accountId]);
+  }, [createForm.accountId]);
 
   const loadTrades = useCallback(async () => {
     const params = new URLSearchParams();
     if (filterAccountId) params.set("accountId", filterAccountId);
+    if (filterFrom) params.set("from", filterFrom);
+    if (filterTo) params.set("to", filterTo);
     if (filterPair) params.set("pair", filterPair);
-    if (filterStrategy) params.set("strategy", filterStrategy);
-    if (filterSession) params.set("session", filterSession);
+    if (filterOrderType) params.set("orderType", filterOrderType);
+    if (filterIssue) params.set("issue", filterIssue);
+    if (filterStatus) params.set("status", filterStatus);
 
     const response = await fetch(`/api/trades?${params.toString()}`, { cache: "no-store" });
     if (!response.ok) return;
     const body = await response.json();
     setTrades(body.data ?? []);
-  }, [filterAccountId, filterPair, filterStrategy, filterSession]);
+  }, [filterAccountId, filterFrom, filterTo, filterPair, filterOrderType, filterIssue, filterStatus]);
 
   useEffect(() => {
     void loadAccounts();
@@ -103,38 +138,87 @@ export function TradesManager() {
   }, [loadTrades]);
 
   const pairOptions = useMemo(() => Array.from(new Set(trades.map((trade) => trade.pair))).sort(), [trades]);
-  const strategyOptions = useMemo(() => Array.from(new Set(trades.map((trade) => trade.strategy))).sort(), [trades]);
 
-  const resetForm = () => {
-    setEditingId(null);
-    setForm((prev) => ({ ...initialForm, accountId: prev.accountId || accounts[0]?._id || "" }));
+  const visibleTrades = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    let rows = trades;
+    if (normalizedSearch) {
+      rows = rows.filter((trade) => {
+        const haystack = [trade.pair, trade.strategy, trade.setup, trade.observation]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(normalizedSearch);
+      });
+    }
+
+    const sorted = [...rows];
+    switch (sortBy) {
+      case "date_asc":
+        sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        break;
+      case "result_desc":
+        sorted.sort((a, b) => (b.resultDollar ?? 0) - (a.resultDollar ?? 0));
+        break;
+      case "result_asc":
+        sorted.sort((a, b) => (a.resultDollar ?? 0) - (b.resultDollar ?? 0));
+        break;
+      case "pair_asc":
+        sorted.sort((a, b) => a.pair.localeCompare(b.pair));
+        break;
+      case "pair_desc":
+        sorted.sort((a, b) => b.pair.localeCompare(a.pair));
+        break;
+      case "status":
+        sorted.sort((a, b) => {
+          const statusA = a.status ?? "closed";
+          const statusB = b.status ?? "closed";
+          if (statusA === statusB) return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return statusA === "open" ? -1 : 1;
+        });
+        break;
+      case "date_desc":
+      default:
+        sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        break;
+    }
+
+    return sorted;
+  }, [trades, searchTerm, sortBy]);
+
+  const resetCreateForm = () => {
+    setEditingTradeId(null);
+    setCreateForm((prev) => ({ ...initialCreateForm, accountId: prev.accountId || accounts[0]?._id || "" }));
   };
 
-  const onSubmit = async (event: FormEvent) => {
+  const onSubmitCreate = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError("");
 
     const payload = {
-      ...form,
-      date: new Date(form.date).toISOString(),
+      ...createForm,
+      date: new Date(createForm.date).toISOString(),
+      pair: createForm.pair.toUpperCase(),
     };
 
-    const response = await fetch(editingId ? `/api/trades/${editingId}` : "/api/trades", {
-      method: editingId ? "PATCH" : "POST",
+    const response = await fetch(editingTradeId ? `/api/trades/${editingTradeId}` : "/api/trades", {
+      method: editingTradeId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Impossible de sauvegarder le trade.");
+      setError(body?.error ?? "Impossible d'enregistrer la transaction.");
       setLoading(false);
       return;
     }
 
     await loadTrades();
-    resetForm();
+    resetCreateForm();
+    setIsCreateOpen(false);
     setLoading(false);
   };
 
@@ -142,12 +226,15 @@ export function TradesManager() {
     const response = await fetch(`/api/trades/${id}`, { method: "DELETE" });
     if (!response.ok) return;
     await loadTrades();
-    if (editingId === id) resetForm();
+    if (editingTradeId === id) {
+      resetCreateForm();
+      setIsCreateOpen(false);
+    }
   };
 
   const onEdit = (trade: Trade) => {
-    setEditingId(trade._id);
-    setForm({
+    setEditingTradeId(trade._id);
+    setCreateForm({
       accountId: trade.accountId,
       date: new Date(trade.date).toISOString().slice(0, 16),
       pair: trade.pair,
@@ -155,179 +242,437 @@ export function TradesManager() {
       lot: trade.lot,
       setup: trade.setup,
       strategy: trade.strategy,
-      session: trade.session,
-      rpt: 1,
+      rpt: trade.rpt,
       rrRatio: trade.rrRatio,
-      issue: trade.issue,
-      resultDollar: trade.resultDollar,
-      resultPercent: trade.resultPercent,
+      stopLoss: trade.stopLoss ?? 0,
+      takeProfit: trade.takeProfit ?? 0,
+      observation: trade.observation ?? "",
     });
+    setIsCreateOpen(true);
+    setError("");
   };
+
+  const onStartClose = (tradeId: string) => {
+    setClosingTradeId(tradeId);
+    setCloseForm(initialCloseForm);
+    setError("");
+  };
+
+  const onCloseTrade = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!closingTradeId) return;
+
+    setLoading(true);
+    setError("");
+
+    const response = await fetch(`/api/trades/${closingTradeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "close",
+        closeReason: closeForm.closeReason,
+        resultDollar: closeForm.resultDollar,
+        observation: closeForm.observation,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      setError(body?.error ?? "Impossible de clôturer la transaction.");
+      setLoading(false);
+      return;
+    }
+
+    setClosingTradeId(null);
+    await loadTrades();
+    setLoading(false);
+  };
+
+  const tradeRowsForExport = visibleTrades.map((trade) => ({
+    date: trade.date,
+    pair: trade.pair,
+    orderType: trade.orderType,
+    strategy: trade.strategy,
+    session: (trade.status ?? "closed") === "open" ? "EN COURS" : "CLÔTURÉ",
+    rrRatio: trade.rrRatio,
+    issue: trade.issue ?? "-",
+    resultDollar: trade.resultDollar ?? 0,
+  }));
 
   return (
     <div className="space-y-4">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Filtres trades</h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => exportTradesCsv(trades)}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
-            >
-              Export CSV
+          <h2 className="text-sm font-semibold">Filtres des transactions</h2>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => exportTradesCsv(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+              Exporter CSV
             </button>
-            <button
-              type="button"
-              onClick={() => void exportTradesXlsx(trades)}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
-            >
-              Export Excel
+            <button type="button" onClick={() => void exportTradesXlsx(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+              Exporter Excel
             </button>
-            <button
-              type="button"
-              onClick={() => exportTradesPdf(trades)}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
-            >
-              Export PDF
+            <button type="button" onClick={() => exportTradesPdf(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+              Exporter PDF
             </button>
           </div>
         </div>
-        <div className="grid gap-2 md:grid-cols-4">
-          <select value={filterAccountId} onChange={(event) => setFilterAccountId(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            <option value="">Tous les comptes</option>
-            {accounts.map((account) => (
-              <option key={account._id} value={account._id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-          <select value={filterPair} onChange={(event) => setFilterPair(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            <option value="">Toutes les paires</option>
-            {pairOptions.map((pair) => (
-              <option key={pair} value={pair}>
-                {pair}
-              </option>
-            ))}
-          </select>
-          <select value={filterStrategy} onChange={(event) => setFilterStrategy(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            <option value="">Toutes les stratégies</option>
-            {strategyOptions.map((strategy) => (
-              <option key={strategy} value={strategy}>
-                {strategy}
-              </option>
-            ))}
-          </select>
-          <select value={filterSession} onChange={(event) => setFilterSession(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            <option value="">Toutes les sessions</option>
-            <option value="asia">Asie</option>
-            <option value="london">Londres</option>
-            <option value="new-york">New-York</option>
-            <option value="overlap">Overlap</option>
-          </select>
-        </div>
-      </section>
 
-      <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-        <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">{editingId ? "Éditer le trade" : "Nouveau trade"}</h2>
-            {editingId && (
-              <button onClick={resetForm} className="text-xs text-slate-400 hover:text-slate-200" type="button">
-                Annuler
-              </button>
-            )}
-          </div>
-
-          <form onSubmit={onSubmit} className="space-y-3">
-            <select
-              value={form.accountId}
-              onChange={(event) => setForm((prev) => ({ ...prev, accountId: event.target.value }))}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"
-              required
-            >
+        <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-9">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Compte</label>
+            <select value={filterAccountId} onChange={(event) => setFilterAccountId(event.target.value)} className={fieldClass}>
+              <option value="">Tous les comptes</option>
               {accounts.map((account) => (
                 <option key={account._id} value={account._id}>
                   {account.name}
                 </option>
               ))}
             </select>
-            <input type="datetime-local" value={form.date} onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-            <div className="grid grid-cols-2 gap-2">
-              <input value={form.pair} onChange={(event) => setForm((prev) => ({ ...prev, pair: event.target.value.toUpperCase() }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-              <select value={form.orderType} onChange={(event) => setForm((prev) => ({ ...prev, orderType: event.target.value as TradeForm["orderType"] }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input value={form.setup} onChange={(event) => setForm((prev) => ({ ...prev, setup: event.target.value }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-              <input value={form.strategy} onChange={(event) => setForm((prev) => ({ ...prev, strategy: event.target.value }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="number" step="0.01" value={form.lot} onChange={(event) => setForm((prev) => ({ ...prev, lot: Number(event.target.value) }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-              <select value={form.session} onChange={(event) => setForm((prev) => ({ ...prev, session: event.target.value as TradeForm["session"] }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-                <option value="asia">Asie</option>
-                <option value="london">Londres</option>
-                <option value="new-york">New-York</option>
-                <option value="overlap">Overlap</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="number" step="0.1" value={form.rpt} onChange={(event) => setForm((prev) => ({ ...prev, rpt: Number(event.target.value) }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-              <input type="number" step="0.1" value={form.rrRatio} onChange={(event) => setForm((prev) => ({ ...prev, rrRatio: Number(event.target.value) }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <select value={form.issue} onChange={(event) => setForm((prev) => ({ ...prev, issue: event.target.value as TradeForm["issue"] }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-                <option value="tp">TP</option>
-                <option value="sl">SL</option>
-                <option value="be">BE</option>
-                <option value="partial">Partiel</option>
-                <option value="manual">Manuel</option>
-              </select>
-              <input type="number" step="0.01" value={form.resultPercent} onChange={(event) => setForm((prev) => ({ ...prev, resultPercent: Number(event.target.value) }))} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-            </div>
-            <input type="number" step="0.01" value={form.resultDollar} onChange={(event) => setForm((prev) => ({ ...prev, resultDollar: Number(event.target.value) }))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
-
-            {error && <p className="text-xs text-rose-400">{error}</p>}
-
-            <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
-              <Plus className="h-4 w-4" />
-              {editingId ? "Mettre à jour" : "Ajouter le trade"}
-            </button>
-          </form>
-        </section>
-
-        <section className="rounded-xl border border-slate-800 bg-slate-900">
-          <div className="border-b border-slate-800 px-4 py-3">
-            <h2 className="text-sm font-semibold">Historique des trades</h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Paire</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Stratégie</th>
-                  <th className="px-4 py-3">Session</th>
-                  <th className="px-4 py-3">Issue</th>
-                  <th className="px-4 py-3">Résultat</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trades.map((trade) => (
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Date de début</label>
+            <input type="date" value={filterFrom} onChange={(event) => setFilterFrom(event.target.value)} className={fieldClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Date de fin</label>
+            <input type="date" value={filterTo} onChange={(event) => setFilterTo(event.target.value)} className={fieldClass} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Actif</label>
+            <select value={filterPair} onChange={(event) => setFilterPair(event.target.value)} className={fieldClass}>
+              <option value="">Tous les actifs</option>
+              {pairOptions.map((pair) => (
+                <option key={pair} value={pair}>
+                  {pair}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+                <label className="mb-1 block text-xs text-slate-400">Type d&apos;ordre</label>
+            <select value={filterOrderType} onChange={(event) => setFilterOrderType(event.target.value)} className={fieldClass}>
+              <option value="">Tous</option>
+              <option value="buy">Achat</option>
+              <option value="sell">Vente</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Issue de clôture</label>
+            <select value={filterIssue} onChange={(event) => setFilterIssue(event.target.value)} className={fieldClass}>
+              <option value="">Toutes</option>
+              <option value="tp">TP atteint</option>
+              <option value="sl">SL touché</option>
+              <option value="retractation">Rétractation</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Statut</label>
+            <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className={fieldClass}>
+              <option value="">Tous</option>
+              <option value="open">En cours</option>
+              <option value="closed">Clôturé</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Recherche rapide</label>
+            <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className={fieldClass} placeholder="Actif, stratégie, setup..." />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Trier par</label>
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={fieldClass}>
+              <option value="date_desc">Date (récent → ancien)</option>
+              <option value="date_asc">Date (ancien → récent)</option>
+              <option value="result_desc">Résultat ($ décroissant)</option>
+              <option value="result_asc">Résultat ($ croissant)</option>
+              <option value="pair_asc">Actif (A → Z)</option>
+              <option value="pair_desc">Actif (Z → A)</option>
+              <option value="status">Statut (En cours d&apos;abord)</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-800 bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (isCreateOpen && !editingTradeId) {
+                setIsCreateOpen(false);
+                return;
+              }
+              setIsCreateOpen(true);
+              if (!editingTradeId) resetCreateForm();
+            }}
+            className={`${buttonBase} inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500`}
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau trade
+          </button>
+          <h2 className="text-sm font-semibold">Historique des transactions</h2>
+          <p className="text-xs text-slate-400">{visibleTrades.length} résultat(s)</p>
+        </div>
+
+        {isCreateOpen && (
+          <div className="border-b border-slate-800 bg-slate-950/60 p-4">
+            <form onSubmit={onSubmitCreate} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Compte</label>
+                <select value={createForm.accountId} onChange={(event) => setCreateForm((prev) => ({ ...prev, accountId: event.target.value }))} className={fieldClass} required>
+                  {accounts.map((account) => (
+                    <option key={account._id} value={account._id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Date d&apos;entrée</label>
+                <input type="datetime-local" value={createForm.date} onChange={(event) => setCreateForm((prev) => ({ ...prev, date: event.target.value }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Actif</label>
+                <input value={createForm.pair} onChange={(event) => setCreateForm((prev) => ({ ...prev, pair: event.target.value.toUpperCase() }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Ordre</label>
+                <select value={createForm.orderType} onChange={(event) => setCreateForm((prev) => ({ ...prev, orderType: event.target.value as "buy" | "sell" }))} className={fieldClass}>
+                  <option value="buy">Achat</option>
+                  <option value="sell">Vente</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Lot</label>
+                <input type="number" step="0.01" value={createForm.lot} onChange={(event) => setCreateForm((prev) => ({ ...prev, lot: Number(event.target.value) }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Setup</label>
+                <input value={createForm.setup} onChange={(event) => setCreateForm((prev) => ({ ...prev, setup: event.target.value }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Stratégie</label>
+                <input value={createForm.strategy} onChange={(event) => setCreateForm((prev) => ({ ...prev, strategy: event.target.value }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">RPT (risque/trade)</label>
+                <input type="number" step="0.01" value={createForm.rpt} onChange={(event) => setCreateForm((prev) => ({ ...prev, rpt: Number(event.target.value) }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Ratio R/R</label>
+                <input type="number" step="0.01" value={createForm.rrRatio} onChange={(event) => setCreateForm((prev) => ({ ...prev, rrRatio: Number(event.target.value) }))} className={fieldClass} required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">SL (niveau)</label>
+                <input type="number" step="0.0001" value={createForm.stopLoss} onChange={(event) => setCreateForm((prev) => ({ ...prev, stopLoss: Number(event.target.value) }))} className={fieldClass} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">TP (niveau)</label>
+                <input type="number" step="0.0001" value={createForm.takeProfit} onChange={(event) => setCreateForm((prev) => ({ ...prev, takeProfit: Number(event.target.value) }))} className={fieldClass} />
+              </div>
+              <div className="xl:col-span-4">
+                <label className="mb-1 block text-xs text-slate-400">Observation d&apos;entrée</label>
+                <input value={createForm.observation} onChange={(event) => setCreateForm((prev) => ({ ...prev, observation: event.target.value }))} className={fieldClass} />
+              </div>
+
+              {error && <p className="text-xs text-rose-400 md:col-span-2 xl:col-span-4">{error}</p>}
+
+              <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
+                <button type="submit" disabled={loading} className={`${buttonBase} bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60`}>
+                  {editingTradeId ? "Mettre à jour" : "Lancer le trade (en cours)"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateOpen(false);
+                    resetCreateForm();
+                  }}
+                  className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {closingTradeId && (
+          <div className="border-b border-slate-800 bg-amber-500/5 p-4">
+            <form onSubmit={onCloseTrade} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Pourquoi clôturer ?</label>
+                <select value={closeForm.closeReason} onChange={(event) => setCloseForm((prev) => ({ ...prev, closeReason: event.target.value as CloseReason }))} className={fieldClass}>
+                  <option value="tp">TP atteint</option>
+                  <option value="sl">SL touché</option>
+                  <option value="retractation">Rétractation (fausse analyse)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-400">Résultat en dollars (+/-)</label>
+                <input type="number" step="0.01" value={closeForm.resultDollar} onChange={(event) => setCloseForm((prev) => ({ ...prev, resultDollar: Number(event.target.value) }))} className={fieldClass} required />
+              </div>
+              <div className="md:col-span-2 xl:col-span-2">
+                <label className="mb-1 block text-xs text-slate-400">Observation de clôture (obligatoire)</label>
+                <input
+                  value={closeForm.observation}
+                  onChange={(event) => setCloseForm((prev) => ({ ...prev, observation: event.target.value }))}
+                  className={fieldClass}
+                  required
+                  minLength={2}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
+                <button type="submit" disabled={loading} className={`${buttonBase} inline-flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-60`}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Confirmer la clôture
+                </button>
+                <button type="button" onClick={() => setClosingTradeId(null)} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+                  <XCircle className="h-4 w-4" />
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <div className="space-y-3 p-3 xl:hidden">
+          {visibleTrades.map((trade) => {
+            const accountCurrency = accounts.find((a) => a._id === trade.accountId)?.currency ?? "USD";
+            const status = trade.status ?? "closed";
+            const resultType =
+              typeof trade.resultDollar !== "number" ? "-" : trade.resultDollar > 0 ? "Gain" : trade.resultDollar < 0 ? "Perte" : "Neutre";
+
+            return (
+              <article key={trade._id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-100">{trade.pair} · {trade.orderType.toUpperCase()}</p>
+                    <p className="text-xs text-slate-400">{new Date(trade.date).toLocaleString("fr-FR")}</p>
+                  </div>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${status === "open" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"}`}>
+                    {status === "open" ? "En cours" : "Clôturé"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                  <p><span className="text-slate-400">Lot:</span> {trade.lot}</p>
+                  <p><span className="text-slate-400">R/R:</span> {trade.rrRatio.toFixed(2)}</p>
+                  <p><span className="text-slate-400">RPT:</span> {trade.rpt.toFixed(2)}</p>
+                  <p><span className="text-slate-400">Issue:</span> {trade.closeReason === "tp" ? "TP atteint" : trade.closeReason === "sl" ? "SL touché" : trade.closeReason === "retractation" ? "Rétractation" : "-"}</p>
+                  <p className="col-span-2 break-words"><span className="text-slate-400">Observation:</span> {trade.observation || "-"}</p>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
+                    resultType === "Gain"
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : resultType === "Perte"
+                        ? "bg-rose-500/20 text-rose-200"
+                        : "bg-slate-800 text-slate-200"
+                  }`}>
+                    {resultType}
+                  </span>
+                  <p className={`font-mono text-sm ${typeof trade.resultDollar === "number" && trade.resultDollar >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {typeof trade.resultDollar === "number" ? money(trade.resultDollar, accountCurrency) : "-"}
+                    {typeof trade.resultPercent === "number" ? ` · ${trade.resultPercent.toFixed(2)}%` : ""}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  {status === "open" && (
+                    <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200" title="Clôturer">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-2 text-rose-400 hover:text-rose-300" title="Supprimer">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+
+          {!visibleTrades.length && <p className="rounded-lg border border-slate-800 px-4 py-8 text-center text-sm text-slate-400">Aucune transaction trouvée.</p>}
+        </div>
+
+        <div className="hidden xl:block">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-3">Date entrée</th>
+                <th className="px-4 py-3">Actif</th>
+                <th className="px-4 py-3">Ordre</th>
+                <th className="px-4 py-3 text-right">Lot</th>
+                <th className="px-4 py-3 text-right">RPT</th>
+                <th className="px-4 py-3 text-right">R/R</th>
+                <th className="px-4 py-3 text-right">SL</th>
+                <th className="px-4 py-3 text-right">TP</th>
+                <th className="px-4 py-3">Statut</th>
+                <th className="px-4 py-3">Issue</th>
+                <th className="px-4 py-3">Type résultat</th>
+                <th className="px-4 py-3 text-right">Résultat $</th>
+                <th className="px-4 py-3 text-right">Résultat %</th>
+                <th className="px-4 py-3">Observation</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleTrades.map((trade) => {
+                const accountCurrency = accounts.find((a) => a._id === trade.accountId)?.currency ?? "USD";
+                const resultType =
+                  typeof trade.resultDollar !== "number" ? "-" : trade.resultDollar > 0 ? "Gain" : trade.resultDollar < 0 ? "Perte" : "Neutre";
+
+                return (
                   <tr key={trade._id} className="border-t border-slate-800 text-slate-200">
                     <td className="px-4 py-3 font-mono text-xs text-slate-400">{new Date(trade.date).toLocaleString("fr-FR")}</td>
                     <td className="px-4 py-3">{trade.pair}</td>
                     <td className="px-4 py-3 uppercase">{trade.orderType}</td>
-                    <td className="px-4 py-3">{trade.strategy}</td>
-                    <td className="px-4 py-3 uppercase text-xs">{trade.session}</td>
-                    <td className="px-4 py-3 uppercase text-xs">{trade.issue}</td>
-                    <td className={`px-4 py-3 font-mono ${trade.resultDollar >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{money(trade.resultDollar)}</td>
+                    <td className="px-4 py-3 text-right font-mono">{trade.lot}</td>
+                    <td className="px-4 py-3 text-right font-mono">{trade.rpt.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-mono">{trade.rrRatio.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-mono">{trade.stopLoss ?? "-"}</td>
+                    <td className="px-4 py-3 text-right font-mono">{trade.takeProfit ?? "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
+                        (trade.status ?? "closed") === "open" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"
+                      }`}>
+                        {(trade.status ?? "closed") === "open" ? "En cours" : "Clôturé"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {trade.closeReason ? (
+                        <span className="inline-flex rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-200">
+                          {trade.closeReason === "tp" ? "TP atteint" : trade.closeReason === "sl" ? "SL touché" : "Rétractation"}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
+                        resultType === "Gain"
+                          ? "bg-emerald-500/20 text-emerald-200"
+                          : resultType === "Perte"
+                            ? "bg-rose-500/20 text-rose-200"
+                            : "bg-slate-800 text-slate-200"
+                      }`}>
+                        {resultType}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-3 text-right font-mono ${typeof trade.resultDollar === "number" && trade.resultDollar >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {typeof trade.resultDollar === "number" ? money(trade.resultDollar, accountCurrency) : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono">{typeof trade.resultPercent === "number" ? `${trade.resultPercent.toFixed(2)}%` : "-"}</td>
+                    <td className="max-w-[260px] truncate px-4 py-3" title={trade.observation ?? ""}>{trade.observation || "-"}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
+                        {(trade.status ?? "closed") === "open" && (
+                          <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200" title="Clôturer">
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                        )}
                         <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -337,19 +682,19 @@ export function TradesManager() {
                       </div>
                     </td>
                   </tr>
-                ))}
-                {!trades.length && (
-                  <tr>
-                    <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={8}>
-                      Aucun trade trouvé.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+                );
+              })}
+              {!visibleTrades.length && (
+                <tr>
+                  <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={15}>
+                    Aucune transaction trouvée.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

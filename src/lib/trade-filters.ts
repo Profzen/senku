@@ -6,9 +6,9 @@ export function buildTradeQuery(searchParams: URLSearchParams, userId: string) {
   const accountId = searchParams.get("accountId");
   const pair = searchParams.get("pair");
   const strategy = searchParams.get("strategy");
-  const session = searchParams.get("session");
   const issue = searchParams.get("issue");
   const orderType = searchParams.get("orderType");
+  const status = searchParams.get("status");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const result = searchParams.get("result") as TradeResultFilter | null;
@@ -16,9 +16,9 @@ export function buildTradeQuery(searchParams: URLSearchParams, userId: string) {
   if (accountId) query.accountId = accountId;
   if (pair) query.pair = pair;
   if (strategy) query.strategy = strategy;
-  if (session) query.session = session;
   if (issue) query.issue = issue;
   if (orderType) query.orderType = orderType;
+  if (status) query.status = status;
 
   if (from || to) {
     query.date = {

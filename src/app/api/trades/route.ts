@@ -1,6 +1,5 @@
 import { connectMongoDB } from "@/lib/mongodb";
 import { createTradeSchema } from "@/lib/validators";
-import { recalculateAccountBalance } from "@/lib/account-balance";
 import { buildTradeQuery } from "@/lib/trade-filters";
 import { Account } from "@/models/Account";
 import { Trade } from "@/models/Trade";
@@ -47,12 +46,28 @@ export async function POST(request: Request) {
   }
 
   const trade = await Trade.create({
-    ...payload,
-    userId: session.user.id,
+    accountId: payload.accountId,
     date: new Date(payload.date),
+    pair: payload.pair,
+    orderType: payload.orderType,
+    lot: payload.lot,
+    setup: payload.setup,
+    strategy: payload.strategy,
+    rpt: payload.rpt,
+    rrRatio: payload.rrRatio,
+    stopLoss: payload.stopLoss,
+    takeProfit: payload.takeProfit,
+    status: "open",
+    resultDollar: null,
+    resultPercent: null,
+    closeReason: null,
+    closedAt: null,
+    entryBalance: account.currentBalance,
+    observation: payload.observation,
+    screenshots: payload.screenshots,
+    psychology: payload.psychology,
+    userId: session.user.id,
   });
-
-  await recalculateAccountBalance(payload.accountId, session.user.id);
 
   return NextResponse.json({ data: trade }, { status: 201 });
 }

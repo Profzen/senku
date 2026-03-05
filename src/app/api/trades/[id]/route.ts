@@ -1,5 +1,6 @@
 import { connectMongoDB } from "@/lib/mongodb";
 import { recalculateAccountBalance } from "@/lib/account-balance";
+import { closeTradeSchema } from "@/lib/validators";
 import { Trade } from "@/models/Trade";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
@@ -39,15 +40,56 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Trade not found" }, { status: 404 });
   }
 
-  const updated = await Trade.findOneAndUpdate({ _id: id, userId: session.user.id }, updates, { new: true }).lean();
+  let updatePayload: Record<string, unknown> = {};
+
+  if (updates?.action === "close") {
+    const parsedClose = closeTradeSchema.safeParse(updates);
+    if (!parsedClose.success) {
+      return NextResponse.json({ error: "Invalid close payload", details: parsedClose.error.flatten() }, { status: 400 });
+    }
+
+    if (existingTrade.status === "closed" || existingTrade.closedAt) {
+      return NextResponse.json({ error: "Trade already closed" }, { status: 409 });
+    }
+
+    const { closeReason, resultDollar, observation } = parsedClose.data;
+    const entryBalance = typeof existingTrade.entryBalance === "number" ? existingTrade.entryBalance : 0;
+    const resultPercent = entryBalance > 0 ? (resultDollar / entryBalance) * 100 : 0;
+
+    updatePayload = {
+      status: "closed",
+      closeReason,
+      issue: closeReason,
+      resultDollar,
+      resultPercent,
+      closedAt: new Date(),
+      ...(observation ? { observation } : {}),
+    };
+  } else {
+    updatePayload = {
+      pair: updates?.pair,
+      orderType: updates?.orderType,
+      lot: updates?.lot,
+      setup: updates?.setup,
+      strategy: updates?.strategy,
+      rpt: updates?.rpt,
+      rrRatio: updates?.rrRatio,
+      stopLoss: updates?.stopLoss,
+      takeProfit: updates?.takeProfit,
+      date: updates?.date ? new Date(updates.date) : undefined,
+      observation: updates?.observation,
+      psychology: updates?.psychology,
+    };
+  }
+
+  const sanitizedPayload = Object.fromEntries(Object.entries(updatePayload).filter(([, value]) => value !== undefined));
+
+  const updated = await Trade.findOneAndUpdate({ _id: id, userId: session.user.id }, sanitizedPayload, { new: true }).lean();
   if (!updated) {
     return NextResponse.json({ error: "Trade not found" }, { status: 404 });
   }
 
   await recalculateAccountBalance(existingTrade.accountId, session.user.id);
-  if (typeof updates.accountId === "string" && updates.accountId !== existingTrade.accountId) {
-    await recalculateAccountBalance(updates.accountId, session.user.id);
-  }
 
   return NextResponse.json({ data: updated });
 }

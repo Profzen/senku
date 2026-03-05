@@ -30,12 +30,10 @@ export const createTradeSchema = z.object({
   lot: z.number().positive(),
   setup: z.string().min(2),
   strategy: z.string().min(2),
-  session: z.enum(["asia", "london", "new-york", "overlap"]),
   rpt: z.number().nonnegative(),
   rrRatio: z.number().nonnegative(),
-  issue: z.enum(["tp", "sl", "be", "partial", "manual"]),
-  resultDollar: z.number(),
-  resultPercent: z.number(),
+  stopLoss: z.number().optional(),
+  takeProfit: z.number().optional(),
   screenshots: z.array(z.string().url()).optional(),
   observation: z.string().optional(),
   psychology: z
@@ -48,4 +46,10 @@ export const createTradeSchema = z.object({
       mood: z.string().optional(),
     })
     .optional(),
+});
+
+export const closeTradeSchema = z.object({
+  closeReason: z.enum(["tp", "sl", "retractation"]),
+  resultDollar: z.number(),
+  observation: z.string().trim().min(2),
 });

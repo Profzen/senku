@@ -13,9 +13,8 @@ type Account = {
   initialBalance: number;
   currentBalance: number;
   targetBalance?: number;
-  maxDailyDrawdown?: number;
-  maxTotalDrawdown?: number;
   status: "active" | "inactive" | "passed" | "failed";
+  createdAt?: string;
 };
 
 type AccountForm = {
@@ -25,25 +24,35 @@ type AccountForm = {
   currency: string;
   initialBalance: number;
   targetBalance: number;
-  maxDailyDrawdown: number;
-  maxTotalDrawdown: number;
   status: Account["status"];
 };
 
 const initialForm: AccountForm = {
   name: "",
   broker: "",
-  type: "challenge",
+  type: "personal",
   currency: "USD",
   initialBalance: 10000,
-  targetBalance: 11000,
-  maxDailyDrawdown: 5,
-  maxTotalDrawdown: 10,
+  targetBalance: 12000,
   status: "active",
 };
 
 const money = (value: number, currency = "USD") =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+
+const accountTypeLabel: Record<Account["type"], string> = {
+  personal: "Personnel",
+  prop: "Prop Firm",
+  challenge: "Challenge",
+  virtual: "Test",
+};
+
+const accountStatusLabel: Record<Account["status"], string> = {
+  active: "Actif",
+  inactive: "Inactif",
+  passed: "Validé",
+  failed: "Échoué",
+};
 
 export function AccountsManager() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -73,12 +82,10 @@ export function AccountsManager() {
     setLoading(true);
     setError("");
 
-    const payload = { ...form };
-
     const response = await fetch(editingId ? `/api/accounts/${editingId}` : "/api/accounts", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(form),
     });
 
     if (!response.ok) {
@@ -109,17 +116,15 @@ export function AccountsManager() {
       currency: account.currency,
       initialBalance: account.initialBalance,
       targetBalance: account.targetBalance ?? account.initialBalance,
-      maxDailyDrawdown: account.maxDailyDrawdown ?? 5,
-      maxTotalDrawdown: account.maxTotalDrawdown ?? 10,
       status: account.status,
     });
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
+    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-100">{editingId ? "Éditer le compte" : "Nouveau compte"}</h2>
+          <h2 className="text-sm font-semibold text-slate-100">{editingId ? "Modifier le compte" : "Nouveau compte"}</h2>
           {editingId && (
             <button type="button" onClick={resetForm} className="text-xs text-slate-400 hover:text-slate-200">
               Annuler
@@ -128,80 +133,86 @@ export function AccountsManager() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3">
-          <input
-            placeholder="Nom du compte"
-            value={form.name}
-            onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-            required
-          />
-          <input
-            placeholder="Broker"
-            value={form.broker}
-            onChange={(event) => setForm((prev) => ({ ...prev, broker: event.target.value }))}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-            required
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={form.type}
-              onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value as Account["type"] }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-            >
-              <option value="personal">Personal</option>
-              <option value="prop">Prop</option>
-              <option value="challenge">Challenge</option>
-              <option value="virtual">Virtual</option>
-            </select>
-            <select
-              value={form.status}
-              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as Account["status"] }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="passed">Passed</option>
-              <option value="failed">Failed</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Nom du compte</label>
             <input
-              type="number"
-              min={0}
-              step="0.1"
-              value={form.maxDailyDrawdown}
-              onChange={(event) => setForm((prev) => ({ ...prev, maxDailyDrawdown: Number(event.target.value) }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-              title="Drawdown journalier max (%)"
-            />
-            <input
-              type="number"
-              min={0}
-              step="0.1"
-              value={form.maxTotalDrawdown}
-              onChange={(event) => setForm((prev) => ({ ...prev, maxTotalDrawdown: Number(event.target.value) }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
-              title="Drawdown global max (%)"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              min={0}
-              value={form.initialBalance}
-              onChange={(event) => setForm((prev) => ({ ...prev, initialBalance: Number(event.target.value) }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+              value={form.name}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
               required
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Broker</label>
+            <input
+              value={form.broker}
+              onChange={(event) => setForm((prev) => ({ ...prev, broker: event.target.value }))}
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Type</label>
+              <select
+                value={form.type}
+                onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value as Account["type"] }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="personal">Personnel</option>
+                <option value="prop">Prop Firm</option>
+                <option value="challenge">Challenge</option>
+                <option value="virtual">Test</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Statut</label>
+              <select
+                value={form.status}
+                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as Account["status"] }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+                <option value="passed">Validé</option>
+                <option value="failed">Échoué</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Devise</label>
+              <input
+                value={form.currency}
+                onChange={(event) => setForm((prev) => ({ ...prev, currency: event.target.value.toUpperCase() }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Solde initial</label>
+              <input
+                type="number"
+                min={0}
+                value={form.initialBalance}
+                onChange={(event) => setForm((prev) => ({ ...prev, initialBalance: Number(event.target.value) }))}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-slate-400">Objectif du compte</label>
             <input
               type="number"
               min={0}
               value={form.targetBalance}
               onChange={(event) => setForm((prev) => ({ ...prev, targetBalance: Number(event.target.value) }))}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500"
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               required
             />
           </div>
@@ -230,10 +241,11 @@ export function AccountsManager() {
                 <th className="px-4 py-3">Nom</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Broker</th>
+                <th className="px-4 py-3">Créé le</th>
                 <th className="px-4 py-3">Solde initial</th>
                 <th className="px-4 py-3">Solde actuel</th>
+                <th className="px-4 py-3">Objectif</th>
                 <th className="px-4 py-3">Statut</th>
-                <th className="px-4 py-3">Règles DD</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -241,14 +253,13 @@ export function AccountsManager() {
               {accounts.map((account) => (
                 <tr key={account._id} className="border-t border-slate-800 text-slate-200">
                   <td className="px-4 py-3 font-medium">{account.name}</td>
-                  <td className="px-4 py-3 uppercase text-xs">{account.type}</td>
+                  <td className="px-4 py-3 text-xs">{accountTypeLabel[account.type]}</td>
                   <td className="px-4 py-3">{account.broker}</td>
+                  <td className="px-4 py-3 text-xs text-slate-400">{account.createdAt ? new Date(account.createdAt).toLocaleDateString("fr-FR") : "-"}</td>
                   <td className="px-4 py-3 font-mono">{money(account.initialBalance, account.currency)}</td>
                   <td className="px-4 py-3 font-mono">{money(account.currentBalance, account.currency)}</td>
-                  <td className="px-4 py-3 uppercase text-xs">{account.status}</td>
-                  <td className="px-4 py-3 text-xs text-slate-300">
-                    J: {account.maxDailyDrawdown ?? 0}% · G: {account.maxTotalDrawdown ?? 0}%
-                  </td>
+                  <td className="px-4 py-3 font-mono">{money(account.targetBalance ?? account.initialBalance, account.currency)}</td>
+                  <td className="px-4 py-3 text-xs">{accountStatusLabel[account.status]}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <button onClick={() => onEdit(account)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
@@ -263,7 +274,7 @@ export function AccountsManager() {
               ))}
               {!accounts.length && (
                 <tr>
-                  <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={8}>
+                  <td className="px-4 py-10 text-center text-sm text-slate-400" colSpan={9}>
                     Aucun compte trouvé.
                   </td>
                 </tr>

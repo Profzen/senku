@@ -18,8 +18,7 @@ type Trade = {
   date: string;
   pair: string;
   strategy: string;
-  session: "asia" | "london" | "new-york" | "overlap";
-  resultDollar: number;
+  resultDollar?: number;
   psychology?: Psychology;
 };
 
@@ -32,7 +31,6 @@ export function JournalManager() {
   const [form, setForm] = useState<Psychology>({});
 
   const [pair, setPair] = useState("");
-  const [session, setSession] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [planFilter, setPlanFilter] = useState("");
@@ -44,7 +42,6 @@ export function JournalManager() {
     const params = new URLSearchParams();
     params.set("limit", "150");
     if (pair) params.set("pair", pair);
-    if (session) params.set("session", session);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
 
@@ -53,7 +50,7 @@ export function JournalManager() {
 
     const body = await response.json();
     setTrades(body.data ?? []);
-  }, [pair, session, from, to]);
+  }, [pair, from, to]);
 
   useEffect(() => {
     void loadTrades();
@@ -113,17 +110,16 @@ export function JournalManager() {
           <h1 className="text-sm font-semibold">Journal psychologique</h1>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-5">
+        <div className="grid gap-2 md:grid-cols-4">
           <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} placeholder="Paire" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
-          <select value={session} onChange={(event) => setSession(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-            <option value="">Toutes sessions</option>
-            <option value="asia">Asie</option>
-            <option value="london">Londres</option>
-            <option value="new-york">New-York</option>
-            <option value="overlap">Overlap</option>
-          </select>
-          <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
-          <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">Date de début</label>
+            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-slate-400">Date de fin</label>
+            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          </div>
           <select value={planFilter} onChange={(event) => setPlanFilter(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
             <option value="">Plan: tous</option>
             <option value="yes">Plan respecté</option>
@@ -150,7 +146,7 @@ export function JournalManager() {
                       {trade.pair} · {trade.strategy}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {new Date(trade.date).toLocaleString("fr-FR")} · {trade.session.toUpperCase()} · {money(trade.resultDollar)}
+                      {new Date(trade.date).toLocaleString("fr-FR")} · {money(trade.resultDollar ?? 0)}
                     </p>
                   </div>
                   {!isEditing ? (
@@ -207,7 +203,7 @@ export function JournalManager() {
                     </select>
                     <input value={form.error ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, error: event.target.value }))} placeholder="Erreur détectée (FOMO, revenge...)" className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 md:col-span-3" />
                     <input value={form.lesson ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, lesson: event.target.value }))} placeholder="Leçon apprise" className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 md:col-span-2" />
-                    <input value={form.mood ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, mood: event.target.value }))} placeholder="Humeur session" className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input value={form.mood ?? ""} onChange={(event) => setForm((prev) => ({ ...prev, mood: event.target.value }))} placeholder="Humeur" className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                 )}
               </article>

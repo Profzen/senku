@@ -8,14 +8,19 @@ const TradeSchema = new Schema(
     pair: { type: String, required: true },
     orderType: { type: String, enum: ["buy", "sell"], required: true },
     lot: { type: Number, required: true },
-    session: { type: String, enum: ["asia", "london", "new-york", "overlap"], required: true },
     setup: { type: String, required: true },
     strategy: { type: String, required: true },
     rpt: { type: Number, required: true },
     rrRatio: { type: Number, required: true },
-    issue: { type: String, enum: ["tp", "sl", "be", "partial", "manual"], required: true },
-    resultPercent: { type: Number, required: true },
-    resultDollar: { type: Number, required: true },
+    stopLoss: { type: Number },
+    takeProfit: { type: Number },
+    status: { type: String, enum: ["open", "closed"], default: "open", index: true },
+    closeReason: { type: String, enum: ["tp", "sl", "retractation"] },
+    issue: { type: String, enum: ["tp", "sl", "retractation", "be", "partial", "manual"] },
+    resultPercent: { type: Number },
+    resultDollar: { type: Number },
+    entryBalance: { type: Number, required: true },
+    closedAt: { type: Date },
     screenshots: [{ type: String }],
     psychology: {
       emotionalState: { type: Number, min: 1, max: 10 },
@@ -33,6 +38,7 @@ const TradeSchema = new Schema(
 
 TradeSchema.index({ accountId: 1, date: -1 });
 TradeSchema.index({ userId: 1, date: -1 });
+TradeSchema.index({ userId: 1, status: 1, date: -1 });
 TradeSchema.index({ accountId: 1, pair: 1 });
 TradeSchema.index({ accountId: 1, strategy: 1 });
 TradeSchema.index({ accountId: 1, resultDollar: 1 });

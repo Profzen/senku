@@ -78,8 +78,8 @@ export function PreferencesManager() {
                 onChange={(event) => setPreferences((prev) => ({ ...prev, theme: event.target.value as Preferences["theme"] }))}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
+                <option value="dark">Sombre</option>
+                <option value="light">Clair</option>
               </select>
             </div>
 
@@ -96,7 +96,7 @@ export function PreferencesManager() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs text-slate-400">Timezone</label>
+              <label className="mb-1 block text-xs text-slate-400">Fuseau horaire</label>
               <input
                 value={preferences.timezone}
                 onChange={(event) => setPreferences((prev) => ({ ...prev, timezone: event.target.value }))}

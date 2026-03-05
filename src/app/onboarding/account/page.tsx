@@ -9,8 +9,8 @@ export default function OnboardingAccountPage() {
           <Layers3 className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold">Onboarding — Étape 1/2</h1>
-          <p className="text-sm text-slate-400">Crée ton premier compte de trading.</p>
+          <h1 className="text-lg font-semibold">Configuration initiale</h1>
+          <p className="text-sm text-slate-400">Crée ton premier compte de trading pour démarrer.</p>
         </div>
       </div>
       <OnboardingAccountStep />
