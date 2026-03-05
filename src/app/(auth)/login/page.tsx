@@ -1,7 +1,16 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { ChartNoAxesCombined } from "lucide-react";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    email?: string;
+    reason?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+
   return (
     <section className="w-full rounded-2xl border border-slate-800 bg-slate-900 p-6">
       <header className="mb-6">
@@ -11,7 +20,7 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold">Connexion Senku</h1>
         <p className="mt-1 text-sm text-slate-400">Accède à ton dashboard de trading.</p>
       </header>
-      <LoginForm />
+      <LoginForm initialEmail={resolvedSearchParams.email} initialReason={resolvedSearchParams.reason} />
     </section>
   );
 }

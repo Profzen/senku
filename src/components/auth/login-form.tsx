@@ -2,16 +2,20 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-export function LoginForm() {
+type LoginFormProps = {
+  initialEmail?: string;
+  initialReason?: string;
+};
+
+export function LoginForm({ initialEmail = "", initialReason = "" }: LoginFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(
-    searchParams.get("reason") === "account-exists" ? "Ce compte existe déjà. Connecte-toi." : "",
+    initialReason === "account-exists" ? "Ce compte existe déjà. Connecte-toi." : "",
   );
   const [loading, setLoading] = useState(false);
 
