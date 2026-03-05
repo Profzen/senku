@@ -2,7 +2,7 @@
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export type TradeExportRow = {
   date: string;
@@ -53,12 +53,34 @@ export function exportTradesCsv(rows: TradeExportRow[]) {
   URL.revokeObjectURL(link.href);
 }
 
-export function exportTradesXlsx(rows: TradeExportRow[]) {
+export async function exportTradesXlsx(rows: TradeExportRow[]) {
   const normalized = normalizeRows(rows);
-  const worksheet = XLSX.utils.json_to_sheet(normalized);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Trades");
-  XLSX.writeFile(workbook, `senku-trades-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Trades");
+
+  worksheet.columns = [
+    { header: "Date", key: "Date", width: 20 },
+    { header: "Paire", key: "Paire", width: 12 },
+    { header: "Type", key: "Type", width: 10 },
+    { header: "Strategie", key: "Strategie", width: 15 },
+    { header: "Session", key: "Session", width: 12 },
+    { header: "RR", key: "RR", width: 8 },
+    { header: "Issue", key: "Issue", width: 10 },
+    { header: "Resultat", key: "Resultat", width: 12 },
+  ];
+
+  normalized.forEach((row) => worksheet.addRow(row));
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `senku-trades-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 export function exportTradesPdf(rows: TradeExportRow[]) {

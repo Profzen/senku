@@ -179,7 +179,7 @@ export function TradesManager() {
             </button>
             <button
               type="button"
-              onClick={() => exportTradesXlsx(trades)}
+              onClick={() => void exportTradesXlsx(trades)}
               className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
             >
               Export Excel
