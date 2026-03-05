@@ -18,34 +18,43 @@ export function RegisterForm() {
     setError("");
     setLoading(true);
 
-    const response = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      setError(body?.error ?? "Impossible de créer le compte.");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+
+        if (response.status === 409) {
+          router.push(`/login?email=${encodeURIComponent(email)}&reason=account-exists`);
+          return;
+        }
+
+        setError(body?.error ?? "Impossible de créer le compte.");
+        return;
+      }
+
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        router.push("/login");
+        return;
+      }
+
+      router.push("/onboarding/account");
+      router.refresh();
+    } catch {
+      setError("Erreur réseau. Réessaie dans un instant.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const signInResult = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    setLoading(false);
-
-    if (signInResult?.error) {
-      router.push("/login");
-      return;
-    }
-
-    router.push("/onboarding/account");
-    router.refresh();
   };
 
   return (

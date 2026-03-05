@@ -2,14 +2,17 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("reason") === "account-exists" ? "Ce compte existe déjà. Connecte-toi." : "",
+  );
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (event: FormEvent) => {
@@ -17,21 +20,25 @@ export function LoginForm() {
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      if (result?.error || result?.ok === false) {
+        setError("Email ou mot de passe invalide.");
+        return;
+      }
 
-    if (result?.error) {
-      setError("Email ou mot de passe invalide.");
-      return;
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Erreur de connexion. Réessaie dans un instant.");
+    } finally {
+      setLoading(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   };
 
   return (
