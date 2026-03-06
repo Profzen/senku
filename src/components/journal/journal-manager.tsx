@@ -110,22 +110,26 @@ export function JournalManager() {
           <h1 className="text-sm font-semibold">Journal psychologique</h1>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-4">
-          <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} placeholder="Paire" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
-          <div className="space-y-1">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="min-w-0">
+            <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} placeholder="Paire" className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          </div>
+          <div className="min-w-0 space-y-1">
             <label className="block text-xs text-slate-400">Date de début</label>
             <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
           </div>
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <label className="block text-xs text-slate-400">Date de fin</label>
             <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
           </div>
-          <select value={planFilter} onChange={(event) => setPlanFilter(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
-            <option value="">Plan: tous</option>
-            <option value="yes">Plan respecté</option>
-            <option value="partial">Plan partiel</option>
-            <option value="no">Plan non respecté</option>
-          </select>
+          <div className="min-w-0">
+            <select value={planFilter} onChange={(event) => setPlanFilter(event.target.value)} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100">
+              <option value="">Plan: tous</option>
+              <option value="yes">Plan respecté</option>
+              <option value="partial">Plan partiel</option>
+              <option value="no">Plan non respecté</option>
+            </select>
+          </div>
         </div>
       </section>
 

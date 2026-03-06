@@ -234,7 +234,7 @@ export function AccountsManager() {
         <div className="border-b border-slate-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-100">Comptes de trading</h2>
         </div>
-        <div className="space-y-3 p-3 lg:hidden">
+        <div className="space-y-3 p-3 xl:hidden">
           {accounts.map((account) => (
             <article key={account._id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
               <div className="mb-2 flex items-start justify-between gap-2">
@@ -265,7 +265,7 @@ export function AccountsManager() {
           {!accounts.length && <p className="rounded-lg border border-slate-800 px-4 py-10 text-center text-sm text-slate-400">Aucun compte trouvé.</p>}
         </div>
 
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-slate-400">
               <tr>

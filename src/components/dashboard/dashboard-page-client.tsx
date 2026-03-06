@@ -267,7 +267,7 @@ export function DashboardPageClient() {
             <div className="border-b border-slate-800 px-4 py-3">
               <h2 className="text-sm font-semibold">Transactions récentes</h2>
             </div>
-            <div className="space-y-3 p-3 md:hidden">
+            <div className="space-y-3 p-3 xl:hidden">
               {trades.slice(0, 10).map((trade) => (
                 <article key={trade._id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
                   <div className="mb-2 flex items-start justify-between gap-2">
@@ -290,7 +290,7 @@ export function DashboardPageClient() {
               {!trades.length && <p className="rounded-lg border border-slate-800 px-4 py-8 text-center text-sm text-slate-400">Aucune transaction trouvée pour ces filtres.</p>}
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden xl:block">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-slate-400">
                   <tr>
@@ -354,7 +354,7 @@ export function DashboardPageClient() {
             <CalendarDays className="h-4 w-4 text-blue-400" />
             <h2 className="text-sm font-semibold">Calendrier des performances</h2>
           </div>
-          <div className="space-y-3 p-3 md:hidden">
+          <div className="space-y-3 p-3 lg:hidden">
             {calendarRows.map((row) => (
               <article key={row.date} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
                 <p className="text-sm font-semibold text-slate-100">{new Date(row.date).toLocaleDateString("fr-FR")}</p>
@@ -368,7 +368,7 @@ export function DashboardPageClient() {
             {!calendarRows.length && <p className="rounded-lg border border-slate-800 px-4 py-8 text-center text-sm text-slate-400">Aucune donnée calendrier sur la période sélectionnée.</p>}
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-slate-400">
                 <tr>

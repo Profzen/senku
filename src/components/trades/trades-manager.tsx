@@ -534,7 +534,7 @@ export function TradesManager() {
           </div>
         )}
 
-        <div className="space-y-3 p-3 xl:hidden">
+        <div className="space-y-3 p-3 2xl:hidden">
           {visibleTrades.map((trade) => {
             const accountCurrency = accounts.find((a) => a._id === trade.accountId)?.currency ?? "USD";
             const status = trade.status ?? "closed";
@@ -597,7 +597,7 @@ export function TradesManager() {
           {!visibleTrades.length && <p className="rounded-lg border border-slate-800 px-4 py-8 text-center text-sm text-slate-400">Aucune transaction trouvée.</p>}
         </div>
 
-        <div className="hidden xl:block">
+        <div className="hidden 2xl:block">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-slate-400">
               <tr>
