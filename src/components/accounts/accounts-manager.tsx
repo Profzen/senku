@@ -121,7 +121,7 @@ export function AccountsManager() {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+    <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-100">{editingId ? "Modifier le compte" : "Nouveau compte"}</h2>
@@ -230,12 +230,43 @@ export function AccountsManager() {
         </form>
       </section>
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900">
+      <section className="min-w-0 rounded-xl border border-slate-800 bg-slate-900">
         <div className="border-b border-slate-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-100">Comptes de trading</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+        <div className="space-y-3 p-3 lg:hidden">
+          {accounts.map((account) => (
+            <article key={account._id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">{account.name}</p>
+                  <p className="text-xs text-slate-400">{accountTypeLabel[account.type]} · {account.broker}</p>
+                </div>
+                <span className="text-xs text-slate-300">{accountStatusLabel[account.status]}</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-1 text-xs text-slate-300">
+                <p><span className="text-slate-400">Créé le:</span> {account.createdAt ? new Date(account.createdAt).toLocaleDateString("fr-FR") : "-"}</p>
+                <p><span className="text-slate-400">Solde initial:</span> {money(account.initialBalance, account.currency)}</p>
+                <p><span className="text-slate-400">Solde actuel:</span> {money(account.currentBalance, account.currency)}</p>
+                <p><span className="text-slate-400">Objectif:</span> {money(account.targetBalance ?? account.initialBalance, account.currency)}</p>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => onEdit(account)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => onDelete(account._id)} className="rounded-md border border-slate-700 p-2 text-rose-400 hover:text-rose-300" title="Supprimer">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </article>
+          ))}
+          {!accounts.length && <p className="rounded-lg border border-slate-800 px-4 py-10 text-center text-sm text-slate-400">Aucun compte trouvé.</p>}
+        </div>
+
+        <div className="hidden lg:block">
+          <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-slate-400">
               <tr>
                 <th className="px-4 py-3">Nom</th>

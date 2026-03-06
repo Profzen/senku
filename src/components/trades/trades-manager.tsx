@@ -317,8 +317,8 @@ export function TradesManager() {
           </div>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-9">
-          <div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Compte</label>
             <select value={filterAccountId} onChange={(event) => setFilterAccountId(event.target.value)} className={fieldClass}>
               <option value="">Tous les comptes</option>
@@ -329,15 +329,15 @@ export function TradesManager() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de début</label>
             <input type="date" value={filterFrom} onChange={(event) => setFilterFrom(event.target.value)} className={fieldClass} />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de fin</label>
             <input type="date" value={filterTo} onChange={(event) => setFilterTo(event.target.value)} className={fieldClass} />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Actif</label>
             <select value={filterPair} onChange={(event) => setFilterPair(event.target.value)} className={fieldClass}>
               <option value="">Tous les actifs</option>
@@ -348,15 +348,15 @@ export function TradesManager() {
               ))}
             </select>
           </div>
-          <div>
-                <label className="mb-1 block text-xs text-slate-400">Type d&apos;ordre</label>
+          <div className="min-w-0">
+            <label className="mb-1 block text-xs text-slate-400">Type d&apos;ordre</label>
             <select value={filterOrderType} onChange={(event) => setFilterOrderType(event.target.value)} className={fieldClass}>
               <option value="">Tous</option>
               <option value="buy">Achat</option>
               <option value="sell">Vente</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Issue de clôture</label>
             <select value={filterIssue} onChange={(event) => setFilterIssue(event.target.value)} className={fieldClass}>
               <option value="">Toutes</option>
@@ -365,7 +365,7 @@ export function TradesManager() {
               <option value="retractation">Rétractation</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Statut</label>
             <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className={fieldClass}>
               <option value="">Tous</option>
@@ -373,11 +373,11 @@ export function TradesManager() {
               <option value="closed">Clôturé</option>
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Recherche rapide</label>
             <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className={fieldClass} placeholder="Actif, stratégie, setup..." />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Trier par</label>
             <select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className={fieldClass}>
               <option value="date_desc">Date (récent → ancien)</option>
@@ -415,8 +415,8 @@ export function TradesManager() {
 
         {isCreateOpen && (
           <div className="border-b border-slate-800 bg-slate-950/60 p-4">
-            <form onSubmit={onSubmitCreate} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div>
+            <form onSubmit={onSubmitCreate} className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Compte</label>
                 <select value={createForm.accountId} onChange={(event) => setCreateForm((prev) => ({ ...prev, accountId: event.target.value }))} className={fieldClass} required>
                   {accounts.map((account) => (
@@ -426,46 +426,46 @@ export function TradesManager() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Date d&apos;entrée</label>
                 <input type="datetime-local" value={createForm.date} onChange={(event) => setCreateForm((prev) => ({ ...prev, date: event.target.value }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Actif</label>
                 <input value={createForm.pair} onChange={(event) => setCreateForm((prev) => ({ ...prev, pair: event.target.value.toUpperCase() }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Ordre</label>
                 <select value={createForm.orderType} onChange={(event) => setCreateForm((prev) => ({ ...prev, orderType: event.target.value as "buy" | "sell" }))} className={fieldClass}>
                   <option value="buy">Achat</option>
                   <option value="sell">Vente</option>
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Lot</label>
                 <input type="number" step="0.01" value={createForm.lot} onChange={(event) => setCreateForm((prev) => ({ ...prev, lot: Number(event.target.value) }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Setup</label>
                 <input value={createForm.setup} onChange={(event) => setCreateForm((prev) => ({ ...prev, setup: event.target.value }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Stratégie</label>
                 <input value={createForm.strategy} onChange={(event) => setCreateForm((prev) => ({ ...prev, strategy: event.target.value }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">RPT (risque/trade)</label>
                 <input type="number" step="0.01" value={createForm.rpt} onChange={(event) => setCreateForm((prev) => ({ ...prev, rpt: Number(event.target.value) }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">Ratio R/R</label>
                 <input type="number" step="0.01" value={createForm.rrRatio} onChange={(event) => setCreateForm((prev) => ({ ...prev, rrRatio: Number(event.target.value) }))} className={fieldClass} required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">SL (niveau)</label>
                 <input type="number" step="0.0001" value={createForm.stopLoss} onChange={(event) => setCreateForm((prev) => ({ ...prev, stopLoss: Number(event.target.value) }))} className={fieldClass} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-xs text-slate-400">TP (niveau)</label>
                 <input type="number" step="0.0001" value={createForm.takeProfit} onChange={(event) => setCreateForm((prev) => ({ ...prev, takeProfit: Number(event.target.value) }))} className={fieldClass} />
               </div>

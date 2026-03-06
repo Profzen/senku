@@ -14,7 +14,7 @@ import { redirect } from "next/navigation";
 
 const menu = [
   { href: "/dashboard", label: "Tableau de bord", icon: ChartNoAxesCombined },
-  { href: "/trades", label: "Transactions", icon: ClipboardList },
+  { href: "/trades", label: "Trade", icon: ClipboardList },
   { href: "/accounts", label: "Comptes", icon: WalletCards },
   { href: "/settings", label: "Paramètres", icon: Cog },
 ];
@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1400px] grid-cols-1 lg:grid-cols-[240px_1fr]">
+      <div className="mx-auto grid min-h-screen w-full max-w-[1400px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="border-b border-slate-800 bg-slate-900 lg:border-r lg:border-b-0">
           <div className="flex items-center gap-2 border-b border-slate-800 px-5 py-5">
             <CircleDollarSign className="h-5 w-5 text-blue-500" />
@@ -56,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <SignOutButton />
           </div>
         </aside>
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="min-w-0 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

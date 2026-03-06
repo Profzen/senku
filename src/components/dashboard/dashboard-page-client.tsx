@@ -150,37 +150,40 @@ export function DashboardPageClient() {
           <p className="text-xs text-slate-400">Espace unifié: vue globale, journal et calendrier.</p>
         </div>
 
-        <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
-          <select value={accountId} onChange={(event) => setAccountId(event.target.value)} className={fieldClass}>
-            <option value="">Tous les comptes</option>
-            {accounts.map((account) => (
-              <option key={account._id} value={account._id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          <div className="min-w-0">
+            <label className="mb-1 block text-xs text-slate-400">Compte</label>
+            <select value={accountId} onChange={(event) => setAccountId(event.target.value)} className={fieldClass}>
+              <option value="">Tous les comptes</option>
+              {accounts.map((account) => (
+                <option key={account._id} value={account._id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de début</label>
             <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className={fieldClass} />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de fin</label>
             <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className={fieldClass} />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Actif</label>
             <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} className={fieldClass} placeholder="EURUSD" />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Stratégie</label>
             <input value={strategy} onChange={(event) => setStrategy(event.target.value)} className={fieldClass} placeholder="Price Action" />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Résultat</label>
             <select value={result} onChange={(event) => setResult(event.target.value)} className={fieldClass}>
               <option value="">Tous</option>
