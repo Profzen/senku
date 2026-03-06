@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { BrainCircuit, Pencil, Save, X } from "lucide-react";
+import { BrainCircuit, Loader2, Pencil, Save, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { emitTradesChanged, onTradesChanged } from "@/lib/client-events";
 
@@ -168,9 +168,9 @@ export function JournalManager() {
                   ) : (
                     <div className="flex gap-2">
                       <button type="button" onClick={() => savePsychology(trade._id)} disabled={saving} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200 disabled:opacity-60" title="Sauvegarder">
-                        <Save className="h-4 w-4" />
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                       </button>
-                      <button type="button" onClick={cancelEdit} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Annuler">
+                      <button type="button" disabled={saving} onClick={cancelEdit} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white disabled:opacity-60" title="Annuler">
                         <X className="h-4 w-4" />
                       </button>
                     </div>

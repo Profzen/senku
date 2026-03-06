@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { CheckCircle2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { exportTradesCsv, exportTradesPdf, exportTradesXlsx } from "@/lib/client-trade-exports";
 import { emitAccountsChanged, emitTradesChanged, onAccountsChanged, onTradesChanged } from "@/lib/client-events";
@@ -92,6 +92,7 @@ export function TradesManager() {
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [deletingTradeId, setDeletingTradeId] = useState<string | null>(null);
+  const [deletingTradeLoading, setDeletingTradeLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -248,8 +249,12 @@ export function TradesManager() {
   const confirmDeleteTrade = async () => {
     if (!deletingTradeId) return;
 
+    setDeletingTradeLoading(true);
     const response = await fetch(`/api/trades/${deletingTradeId}`, { method: "DELETE" });
-    if (!response.ok) return;
+    if (!response.ok) {
+      setDeletingTradeLoading(false);
+      return;
+    }
     await loadTrades();
     emitTradesChanged();
     emitAccountsChanged();
@@ -258,6 +263,7 @@ export function TradesManager() {
       setIsCreateOpen(false);
     }
     setDeletingTradeId(null);
+    setDeletingTradeLoading(false);
   };
 
   const onEdit = (trade: Trade) => {
@@ -330,6 +336,7 @@ export function TradesManager() {
   }));
 
   const deletingTrade = deletingTradeId ? trades.find((item) => item._id === deletingTradeId) : null;
+  const isMutating = loading || deletingTradeLoading;
 
   return (
     <div className="min-w-0 space-y-4">
@@ -428,6 +435,7 @@ export function TradesManager() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-3">
           <button
             type="button"
+            disabled={isMutating}
             onClick={() => {
               if (isCreateOpen && !editingTradeId) {
                 setIsCreateOpen(false);
@@ -436,7 +444,7 @@ export function TradesManager() {
               setIsCreateOpen(true);
               if (!editingTradeId) resetCreateForm();
             }}
-            className={`${buttonBase} inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500`}
+            className={`${buttonBase} inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60`}
           >
             <Plus className="h-4 w-4" />
             Nouveau trade
@@ -510,15 +518,19 @@ export function TradesManager() {
 
               <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
                 <button type="submit" disabled={loading} className={`${buttonBase} bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60`}>
-                  {editingTradeId ? "Mettre à jour" : "Lancer le trade (en cours)"}
+                  <span className="inline-flex items-center gap-2">
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {loading ? "Traitement..." : editingTradeId ? "Mettre à jour" : "Lancer le trade (en cours)"}
+                  </span>
                 </button>
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => {
                     setIsCreateOpen(false);
                     resetCreateForm();
                   }}
-                  className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}
+                  className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-60`}
                 >
                   Annuler
                 </button>
@@ -554,10 +566,10 @@ export function TradesManager() {
               </div>
               <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-4">
                 <button type="submit" disabled={loading} className={`${buttonBase} inline-flex items-center gap-2 bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-60`}>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Confirmer la clôture
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {loading ? "Clôture en cours..." : "Confirmer la clôture"}
                 </button>
-                <button type="button" onClick={() => setClosingTradeId(null)} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+                <button type="button" disabled={loading} onClick={() => setClosingTradeId(null)} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-60`}>
                   <XCircle className="h-4 w-4" />
                   Annuler
                 </button>
@@ -611,14 +623,14 @@ export function TradesManager() {
 
                 <div className="mt-3 flex gap-2">
                   {status === "open" && (
-                    <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200" title="Clôturer">
+                    <button disabled={isMutating} onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200 disabled:opacity-60" title="Clôturer">
                       <CheckCircle2 className="h-4 w-4" />
                     </button>
                   )}
-                  <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
+                  <button disabled={isMutating} onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white disabled:opacity-60" title="Éditer">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-2 text-rose-400 hover:text-rose-300" title="Supprimer">
+                  <button disabled={isMutating} onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-2 text-rose-400 hover:text-rose-300 disabled:opacity-60" title="Supprimer">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -701,14 +713,14 @@ export function TradesManager() {
                     <td className="px-2 py-2">
                       <div className="flex flex-wrap justify-end gap-1">
                         {(trade.status ?? "closed") === "open" && (
-                          <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-1.5 text-emerald-300 hover:text-emerald-200" title="Clôturer">
+                          <button disabled={isMutating} onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-1.5 text-emerald-300 hover:text-emerald-200 disabled:opacity-60" title="Clôturer">
                             <CheckCircle2 className="h-4 w-4" />
                           </button>
                         )}
-                        <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:text-white" title="Éditer">
+                        <button disabled={isMutating} onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:text-white disabled:opacity-60" title="Éditer">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-1.5 text-rose-400 hover:text-rose-300" title="Supprimer">
+                        <button disabled={isMutating} onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-1.5 text-rose-400 hover:text-rose-300 disabled:opacity-60" title="Supprimer">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -735,6 +747,7 @@ export function TradesManager() {
         confirmLabel="Supprimer"
         cancelLabel="Annuler"
         onCancel={() => setDeletingTradeId(null)}
+        isLoading={deletingTradeLoading}
         onConfirm={() => {
           void confirmDeleteTrade();
         }}
