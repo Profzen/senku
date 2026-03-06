@@ -3,6 +3,7 @@
 
 import { BrainCircuit, Pencil, Save, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { emitTradesChanged, onTradesChanged } from "@/lib/client-events";
 
 type Psychology = {
   emotionalState?: number;
@@ -56,6 +57,12 @@ export function JournalManager() {
     void loadTrades();
   }, [loadTrades]);
 
+  useEffect(() => {
+    return onTradesChanged(() => {
+      void loadTrades();
+    });
+  }, [loadTrades]);
+
   const filteredTrades = useMemo(() => {
     if (!planFilter) return trades;
     return trades.filter((trade) => trade.psychology?.planFollowed === planFilter);
@@ -98,6 +105,7 @@ export function JournalManager() {
     }
 
     await loadTrades();
+    emitTradesChanged();
     setSaving(false);
     cancelEdit();
   };

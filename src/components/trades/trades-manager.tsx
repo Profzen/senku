@@ -4,6 +4,8 @@
 import { CheckCircle2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { exportTradesCsv, exportTradesPdf, exportTradesXlsx } from "@/lib/client-trade-exports";
+import { emitAccountsChanged, emitTradesChanged, onAccountsChanged, onTradesChanged } from "@/lib/client-events";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Account = { _id: string; name: string; currency: string };
 
@@ -89,6 +91,7 @@ export function TradesManager() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<string | null>(null);
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
+  const [deletingTradeId, setDeletingTradeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -136,6 +139,21 @@ export function TradesManager() {
   useEffect(() => {
     void loadTrades();
   }, [loadTrades]);
+
+  useEffect(() => {
+    const disposeTrades = onTradesChanged(() => {
+      void loadTrades();
+    });
+    const disposeAccounts = onAccountsChanged(() => {
+      void loadAccounts();
+      void loadTrades();
+    });
+
+    return () => {
+      disposeTrades();
+      disposeAccounts();
+    };
+  }, [loadAccounts, loadTrades]);
 
   const pairOptions = useMemo(() => Array.from(new Set(trades.map((trade) => trade.pair))).sort(), [trades]);
 
@@ -217,19 +235,29 @@ export function TradesManager() {
     }
 
     await loadTrades();
+    emitTradesChanged();
     resetCreateForm();
     setIsCreateOpen(false);
     setLoading(false);
   };
 
-  const onDelete = async (id: string) => {
-    const response = await fetch(`/api/trades/${id}`, { method: "DELETE" });
+  const onDelete = (id: string) => {
+    setDeletingTradeId(id);
+  };
+
+  const confirmDeleteTrade = async () => {
+    if (!deletingTradeId) return;
+
+    const response = await fetch(`/api/trades/${deletingTradeId}`, { method: "DELETE" });
     if (!response.ok) return;
     await loadTrades();
-    if (editingTradeId === id) {
+    emitTradesChanged();
+    emitAccountsChanged();
+    if (editingTradeId === deletingTradeId) {
       resetCreateForm();
       setIsCreateOpen(false);
     }
+    setDeletingTradeId(null);
   };
 
   const onEdit = (trade: Trade) => {
@@ -285,6 +313,8 @@ export function TradesManager() {
 
     setClosingTradeId(null);
     await loadTrades();
+    emitTradesChanged();
+    emitAccountsChanged();
     setLoading(false);
   };
 
@@ -299,8 +329,10 @@ export function TradesManager() {
     resultDollar: trade.resultDollar ?? 0,
   }));
 
+  const deletingTrade = deletingTradeId ? trades.find((item) => item._id === deletingTradeId) : null;
+
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Filtres des transactions</h2>
@@ -598,24 +630,24 @@ export function TradesManager() {
         </div>
 
         <div className="hidden 2xl:block">
-          <table className="w-full text-left text-sm">
+          <table className="w-full table-fixed text-left text-xs">
             <thead className="text-xs uppercase tracking-wide text-slate-400">
               <tr>
-                <th className="px-4 py-3">Date entrée</th>
-                <th className="px-4 py-3">Actif</th>
-                <th className="px-4 py-3">Ordre</th>
-                <th className="px-4 py-3 text-right">Lot</th>
-                <th className="px-4 py-3 text-right">RPT</th>
-                <th className="px-4 py-3 text-right">R/R</th>
-                <th className="px-4 py-3 text-right">SL</th>
-                <th className="px-4 py-3 text-right">TP</th>
-                <th className="px-4 py-3">Statut</th>
-                <th className="px-4 py-3">Issue</th>
-                <th className="px-4 py-3">Type résultat</th>
-                <th className="px-4 py-3 text-right">Résultat $</th>
-                <th className="px-4 py-3 text-right">Résultat %</th>
-                <th className="px-4 py-3">Observation</th>
-                <th className="px-4 py-3">Actions</th>
+                <th className="px-2 py-2">Date entrée</th>
+                <th className="px-2 py-2">Actif</th>
+                <th className="px-2 py-2">Ordre</th>
+                <th className="px-2 py-2 text-right">Lot</th>
+                <th className="px-2 py-2 text-right">RPT</th>
+                <th className="px-2 py-2 text-right">R/R</th>
+                <th className="px-2 py-2 text-right">SL</th>
+                <th className="px-2 py-2 text-right">TP</th>
+                <th className="px-2 py-2">Statut</th>
+                <th className="px-2 py-2">Issue</th>
+                <th className="px-2 py-2">Type résultat</th>
+                <th className="px-2 py-2 text-right">Résultat $</th>
+                <th className="px-2 py-2 text-right">Résultat %</th>
+                <th className="px-2 py-2">Observation</th>
+                <th className="px-2 py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -626,22 +658,22 @@ export function TradesManager() {
 
                 return (
                   <tr key={trade._id} className="border-t border-slate-800 text-slate-200">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-400">{new Date(trade.date).toLocaleString("fr-FR")}</td>
-                    <td className="px-4 py-3">{trade.pair}</td>
-                    <td className="px-4 py-3 uppercase">{trade.orderType}</td>
-                    <td className="px-4 py-3 text-right font-mono">{trade.lot}</td>
-                    <td className="px-4 py-3 text-right font-mono">{trade.rpt.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-mono">{trade.rrRatio.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-mono">{trade.stopLoss ?? "-"}</td>
-                    <td className="px-4 py-3 text-right font-mono">{trade.takeProfit ?? "-"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2 font-mono text-xs text-slate-400">{new Date(trade.date).toLocaleString("fr-FR")}</td>
+                    <td className="px-2 py-2">{trade.pair}</td>
+                    <td className="px-2 py-2 uppercase">{trade.orderType}</td>
+                    <td className="px-2 py-2 text-right font-mono">{trade.lot}</td>
+                    <td className="px-2 py-2 text-right font-mono">{trade.rpt.toFixed(2)}</td>
+                    <td className="px-2 py-2 text-right font-mono">{trade.rrRatio.toFixed(2)}</td>
+                    <td className="px-2 py-2 text-right font-mono">{trade.stopLoss ?? "-"}</td>
+                    <td className="px-2 py-2 text-right font-mono">{trade.takeProfit ?? "-"}</td>
+                    <td className="px-2 py-2">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
                         (trade.status ?? "closed") === "open" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"
                       }`}>
                         {(trade.status ?? "closed") === "open" ? "En cours" : "Clôturé"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       {trade.closeReason ? (
                         <span className="inline-flex rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-200">
                           {trade.closeReason === "tp" ? "TP atteint" : trade.closeReason === "sl" ? "SL touché" : "Rétractation"}
@@ -650,7 +682,7 @@ export function TradesManager() {
                         "-"
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-2">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
                         resultType === "Gain"
                           ? "bg-emerald-500/20 text-emerald-200"
@@ -661,22 +693,22 @@ export function TradesManager() {
                         {resultType}
                       </span>
                     </td>
-                    <td className={`px-4 py-3 text-right font-mono ${typeof trade.resultDollar === "number" && trade.resultDollar >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    <td className={`px-2 py-2 text-right font-mono ${typeof trade.resultDollar === "number" && trade.resultDollar >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {typeof trade.resultDollar === "number" ? money(trade.resultDollar, accountCurrency) : "-"}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{typeof trade.resultPercent === "number" ? `${trade.resultPercent.toFixed(2)}%` : "-"}</td>
-                    <td className="max-w-[260px] truncate px-4 py-3" title={trade.observation ?? ""}>{trade.observation || "-"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                    <td className="px-2 py-2 text-right font-mono">{typeof trade.resultPercent === "number" ? `${trade.resultPercent.toFixed(2)}%` : "-"}</td>
+                    <td className="max-w-[180px] truncate px-2 py-2" title={trade.observation ?? ""}>{trade.observation || "-"}</td>
+                    <td className="px-2 py-2">
+                      <div className="flex flex-wrap justify-end gap-1">
                         {(trade.status ?? "closed") === "open" && (
-                          <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-2 text-emerald-300 hover:text-emerald-200" title="Clôturer">
+                          <button onClick={() => onStartClose(trade._id)} className="rounded-md border border-emerald-700 p-1.5 text-emerald-300 hover:text-emerald-200" title="Clôturer">
                             <CheckCircle2 className="h-4 w-4" />
                           </button>
                         )}
-                        <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-2 text-slate-300 hover:text-white" title="Éditer">
+                        <button onClick={() => onEdit(trade)} className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:text-white" title="Éditer">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-2 text-rose-400 hover:text-rose-300" title="Supprimer">
+                        <button onClick={() => onDelete(trade._id)} className="rounded-md border border-slate-700 p-1.5 text-rose-400 hover:text-rose-300" title="Supprimer">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -695,6 +727,18 @@ export function TradesManager() {
           </table>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deletingTradeId)}
+        title="Confirmer la suppression"
+        message={`Voulez-vous vraiment supprimer ${deletingTrade ? `${deletingTrade.pair} (${new Date(deletingTrade.date).toLocaleString("fr-FR")})` : "ce trade"} ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        onCancel={() => setDeletingTradeId(null)}
+        onConfirm={() => {
+          void confirmDeleteTrade();
+        }}
+      />
     </div>
   );
 }

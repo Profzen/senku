@@ -1,10 +1,12 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { JournalManager } from "@/components/journal/journal-manager";
 import { Activity, ArrowDownRight, ArrowUpRight, CalendarDays, ShieldAlert, Target, TrendingUp } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { onAccountsChanged, onTradesChanged } from "@/lib/client-events";
 
 type StatsPayload = {
   kpis: {
@@ -56,51 +58,66 @@ export function DashboardPageClient() {
   const [strategy, setStrategy] = useState("");
   const [result, setResult] = useState("");
 
-  useEffect(() => {
-    const loadAccounts = async () => {
-      const response = await fetch("/api/accounts", { cache: "no-store" });
-      if (!response.ok) return;
-      const body = await response.json();
-      const loadedAccounts = body.data ?? [];
-      setAccounts(loadedAccounts);
-      if (!accountId && loadedAccounts.length) {
-        setAccountId(loadedAccounts[0]._id);
-      }
-    };
-
-    void loadAccounts();
+  const loadAccounts = useCallback(async () => {
+    const response = await fetch("/api/accounts", { cache: "no-store" });
+    if (!response.ok) return;
+    const body = await response.json();
+    const loadedAccounts = body.data ?? [];
+    setAccounts(loadedAccounts);
+    if (!accountId && loadedAccounts.length) {
+      setAccountId(loadedAccounts[0]._id);
+    }
   }, [accountId]);
 
-  useEffect(() => {
+  const loadDashboardData = useCallback(async () => {
     if (!session?.user?.id) return;
 
-    const load = async () => {
-      const params = new URLSearchParams();
-      if (accountId) params.set("accountId", accountId);
-      if (from) params.set("from", from);
-      if (to) params.set("to", to);
-      if (pair) params.set("pair", pair);
-      if (strategy) params.set("strategy", strategy);
-      if (result) params.set("result", result);
+    const params = new URLSearchParams();
+    if (accountId) params.set("accountId", accountId);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (pair) params.set("pair", pair);
+    if (strategy) params.set("strategy", strategy);
+    if (result) params.set("result", result);
 
-      const [statsResponse, tradesResponse] = await Promise.all([
-        fetch(`/api/stats?${params.toString()}`),
-        fetch(`/api/trades?${params.toString()}`),
-      ]);
+    const [statsResponse, tradesResponse] = await Promise.all([
+      fetch(`/api/stats?${params.toString()}`),
+      fetch(`/api/trades?${params.toString()}`),
+    ]);
 
-      if (statsResponse.ok) {
-        const statsBody = await statsResponse.json();
-        setStats(statsBody.data);
-      }
+    if (statsResponse.ok) {
+      const statsBody = await statsResponse.json();
+      setStats(statsBody.data);
+    }
 
-      if (tradesResponse.ok) {
-        const tradesBody = await tradesResponse.json();
-        setTrades(tradesBody.data ?? []);
-      }
-    };
-
-    void load();
+    if (tradesResponse.ok) {
+      const tradesBody = await tradesResponse.json();
+      setTrades(tradesBody.data ?? []);
+    }
   }, [session?.user?.id, accountId, from, to, pair, strategy, result]);
+
+  useEffect(() => {
+    void loadAccounts();
+  }, [loadAccounts]);
+
+  useEffect(() => {
+    void loadDashboardData();
+  }, [loadDashboardData]);
+
+  useEffect(() => {
+    const disposeTrades = onTradesChanged(() => {
+      void loadDashboardData();
+    });
+    const disposeAccounts = onAccountsChanged(() => {
+      void loadAccounts();
+      void loadDashboardData();
+    });
+
+    return () => {
+      disposeTrades();
+      disposeAccounts();
+    };
+  }, [loadAccounts, loadDashboardData]);
 
   const kpis = useMemo(
     () =>
@@ -139,7 +156,7 @@ export function DashboardPageClient() {
   }, [trades]);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {status === "loading" && (
         <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">Chargement de la session...</div>
       )}

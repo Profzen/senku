@@ -2,7 +2,9 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { emitAccountsChanged, onAccountsChanged } from "@/lib/client-events";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Account = {
   _id: string;
@@ -58,19 +60,26 @@ export function AccountsManager() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [form, setForm] = useState<AccountForm>(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     const response = await fetch("/api/accounts", { cache: "no-store" });
     if (!response.ok) return;
     const body = await response.json();
     setAccounts(body.data ?? []);
-  };
+  }, []);
 
   useEffect(() => {
     void loadAccounts();
-  }, []);
+  }, [loadAccounts]);
+
+  useEffect(() => {
+    return onAccountsChanged(() => {
+      void loadAccounts();
+    });
+  }, [loadAccounts]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -96,15 +105,24 @@ export function AccountsManager() {
     }
 
     await loadAccounts();
+    emitAccountsChanged();
     resetForm();
     setLoading(false);
   };
 
-  const onDelete = async (id: string) => {
-    const response = await fetch(`/api/accounts/${id}`, { method: "DELETE" });
+  const onDelete = (id: string) => {
+    setDeletingAccountId(id);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!deletingAccountId) return;
+
+    const response = await fetch(`/api/accounts/${deletingAccountId}`, { method: "DELETE" });
     if (!response.ok) return;
     await loadAccounts();
-    if (editingId === id) resetForm();
+    emitAccountsChanged();
+    if (editingId === deletingAccountId) resetForm();
+    setDeletingAccountId(null);
   };
 
   const onEdit = (account: Account) => {
@@ -120,8 +138,10 @@ export function AccountsManager() {
     });
   };
 
+  const deletingAccount = deletingAccountId ? accounts.find((item) => item._id === deletingAccountId) : null;
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+    <div className="min-w-0 grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-100">{editingId ? "Modifier le compte" : "Nouveau compte"}</h2>
@@ -314,6 +334,18 @@ export function AccountsManager() {
           </table>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deletingAccountId)}
+        title="Confirmer la suppression"
+        message={`Voulez-vous vraiment supprimer le compte${deletingAccount?.name ? ` \"${deletingAccount.name}\"` : ""} ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        onCancel={() => setDeletingAccountId(null)}
+        onConfirm={() => {
+          void confirmDeleteAccount();
+        }}
+      />
     </div>
   );
 }
