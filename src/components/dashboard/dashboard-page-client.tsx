@@ -1,9 +1,8 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { JournalManager } from "@/components/journal/journal-manager";
-import { Activity, ArrowDownRight, ArrowUpRight, CalendarDays, ShieldAlert, Target, TrendingUp } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight, CalendarDays, Loader2, ShieldAlert, Target, TrendingUp } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { onAccountsChanged, onTradesChanged } from "@/lib/client-events";
@@ -57,6 +56,7 @@ export function DashboardPageClient() {
   const [pair, setPair] = useState("");
   const [strategy, setStrategy] = useState("");
   const [result, setResult] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadAccounts = useCallback(async () => {
     const response = await fetch("/api/accounts", { cache: "no-store" });
@@ -72,27 +72,33 @@ export function DashboardPageClient() {
   const loadDashboardData = useCallback(async () => {
     if (!session?.user?.id) return;
 
-    const params = new URLSearchParams();
-    if (accountId) params.set("accountId", accountId);
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    if (pair) params.set("pair", pair);
-    if (strategy) params.set("strategy", strategy);
-    if (result) params.set("result", result);
+    setIsRefreshing(true);
 
-    const [statsResponse, tradesResponse] = await Promise.all([
-      fetch(`/api/stats?${params.toString()}`),
-      fetch(`/api/trades?${params.toString()}`),
-    ]);
+    try {
+      const params = new URLSearchParams();
+      if (accountId) params.set("accountId", accountId);
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      if (pair) params.set("pair", pair);
+      if (strategy) params.set("strategy", strategy);
+      if (result) params.set("result", result);
 
-    if (statsResponse.ok) {
-      const statsBody = await statsResponse.json();
-      setStats(statsBody.data);
-    }
+      const [statsResponse, tradesResponse] = await Promise.all([
+        fetch(`/api/stats?${params.toString()}`),
+        fetch(`/api/trades?${params.toString()}`),
+      ]);
 
-    if (tradesResponse.ok) {
-      const tradesBody = await tradesResponse.json();
-      setTrades(tradesBody.data ?? []);
+      if (statsResponse.ok) {
+        const statsBody = await statsResponse.json();
+        setStats(statsBody.data);
+      }
+
+      if (tradesResponse.ok) {
+        const tradesBody = await tradesResponse.json();
+        setTrades(tradesBody.data ?? []);
+      }
+    } finally {
+      setIsRefreshing(false);
     }
   }, [session?.user?.id, accountId, from, to, pair, strategy, result]);
 
@@ -170,7 +176,7 @@ export function DashboardPageClient() {
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Compte</label>
-            <select value={accountId} onChange={(event) => setAccountId(event.target.value)} className={fieldClass}>
+            <select disabled={isRefreshing} value={accountId} onChange={(event) => setAccountId(event.target.value)} className={fieldClass}>
               <option value="">Tous les comptes</option>
               {accounts.map((account) => (
                 <option key={account._id} value={account._id}>
@@ -182,27 +188,27 @@ export function DashboardPageClient() {
 
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de début</label>
-            <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className={fieldClass} />
+            <input disabled={isRefreshing} type="date" value={from} onChange={(event) => setFrom(event.target.value)} className={fieldClass} />
           </div>
 
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Date de fin</label>
-            <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className={fieldClass} />
+            <input disabled={isRefreshing} type="date" value={to} onChange={(event) => setTo(event.target.value)} className={fieldClass} />
           </div>
 
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Actif</label>
-            <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} className={fieldClass} placeholder="EURUSD" />
+            <input disabled={isRefreshing} value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} className={fieldClass} placeholder="EURUSD" />
           </div>
 
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Stratégie</label>
-            <input value={strategy} onChange={(event) => setStrategy(event.target.value)} className={fieldClass} placeholder="Price Action" />
+            <input disabled={isRefreshing} value={strategy} onChange={(event) => setStrategy(event.target.value)} className={fieldClass} placeholder="Price Action" />
           </div>
 
           <div className="min-w-0">
             <label className="mb-1 block text-xs text-slate-400">Résultat</label>
-            <select value={result} onChange={(event) => setResult(event.target.value)} className={fieldClass}>
+            <select disabled={isRefreshing} value={result} onChange={(event) => setResult(event.target.value)} className={fieldClass}>
               <option value="">Tous</option>
               <option value="winner">Gagnants</option>
               <option value="loser">Perdants</option>
@@ -214,20 +220,30 @@ export function DashboardPageClient() {
 
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-3">
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setActiveTab("overview")} className={`${tabButtonClass} ${activeTab === "overview" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"}`}>
+          <button disabled={isRefreshing} type="button" onClick={() => setActiveTab("overview")} className={`${tabButtonClass} ${activeTab === "overview" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"} disabled:opacity-60`}>
             Vue générale
           </button>
-          <button type="button" onClick={() => setActiveTab("journal")} className={`${tabButtonClass} ${activeTab === "journal" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"}`}>
+          <button disabled={isRefreshing} type="button" onClick={() => setActiveTab("journal")} className={`${tabButtonClass} ${activeTab === "journal" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"} disabled:opacity-60`}>
             Journal
           </button>
-          <button type="button" onClick={() => setActiveTab("calendar")} className={`${tabButtonClass} ${activeTab === "calendar" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"}`}>
+          <button disabled={isRefreshing} type="button" onClick={() => setActiveTab("calendar")} className={`${tabButtonClass} ${activeTab === "calendar" ? "bg-blue-600 text-white" : "border border-slate-700 text-slate-200 hover:bg-slate-800"} disabled:opacity-60`}>
             Calendrier
           </button>
         </div>
       </section>
 
-      {activeTab === "overview" && (
-        <>
+      <div className="relative">
+        {isRefreshing && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-slate-950/50 backdrop-blur-[1px]">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Mise à jour en cours...
+            </div>
+          </div>
+        )}
+
+        {activeTab === "overview" && (
+          <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <article className="rounded-xl border border-slate-800 bg-slate-900 p-4">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
@@ -360,13 +376,13 @@ export function DashboardPageClient() {
               Données synchronisées avec les API et MongoDB.
             </div>
           </footer>
-        </>
-      )}
+          </>
+        )}
 
-      {activeTab === "journal" && <JournalManager />}
+        {activeTab === "journal" && <JournalManager />}
 
-      {activeTab === "calendar" && (
-        <section className="rounded-xl border border-slate-800 bg-slate-900">
+        {activeTab === "calendar" && (
+          <section className="rounded-xl border border-slate-800 bg-slate-900">
           <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-3">
             <CalendarDays className="h-4 w-4 text-blue-400" />
             <h2 className="text-sm font-semibold">Calendrier des performances</h2>
@@ -414,8 +430,9 @@ export function DashboardPageClient() {
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+          </section>
+        )}
+      </div>
     </div>
   );
 }

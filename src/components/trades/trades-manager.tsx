@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { CheckCircle2, Loader2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
@@ -93,6 +92,7 @@ export function TradesManager() {
   const [editingTradeId, setEditingTradeId] = useState<string | null>(null);
   const [deletingTradeId, setDeletingTradeId] = useState<string | null>(null);
   const [deletingTradeLoading, setDeletingTradeLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState<null | "csv" | "xlsx" | "pdf">(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -338,19 +338,39 @@ export function TradesManager() {
   const deletingTrade = deletingTradeId ? trades.find((item) => item._id === deletingTradeId) : null;
   const isMutating = loading || deletingTradeLoading;
 
+  const onExport = async (type: "csv" | "xlsx" | "pdf") => {
+    if (exportLoading) return;
+    setExportLoading(type);
+
+    try {
+      if (type === "csv") {
+        exportTradesCsv(tradeRowsForExport);
+      } else if (type === "xlsx") {
+        await exportTradesXlsx(tradeRowsForExport);
+      } else {
+        exportTradesPdf(tradeRowsForExport);
+      }
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
   return (
     <div className="min-w-0 space-y-4">
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Filtres des transactions</h2>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => exportTradesCsv(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+            <button type="button" disabled={isMutating || exportLoading !== null} onClick={() => void onExport("csv")} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-60`}>
+              {exportLoading === "csv" && <Loader2 className="h-4 w-4 animate-spin" />}
               Exporter CSV
             </button>
-            <button type="button" onClick={() => void exportTradesXlsx(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+            <button type="button" disabled={isMutating || exportLoading !== null} onClick={() => void onExport("xlsx")} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-60`}>
+              {exportLoading === "xlsx" && <Loader2 className="h-4 w-4 animate-spin" />}
               Exporter Excel
             </button>
-            <button type="button" onClick={() => exportTradesPdf(tradeRowsForExport)} className={`${buttonBase} border border-slate-700 text-slate-200 hover:bg-slate-800`}>
+            <button type="button" disabled={isMutating || exportLoading !== null} onClick={() => void onExport("pdf")} className={`${buttonBase} inline-flex items-center gap-2 border border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-60`}>
+              {exportLoading === "pdf" && <Loader2 className="h-4 w-4 animate-spin" />}
               Exporter PDF
             </button>
           </div>

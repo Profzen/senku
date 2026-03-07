@@ -1,23 +1,10 @@
 import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { SignOutButton } from "@/components/auth/signout-button";
-import {
-  ChartNoAxesCombined,
-  CircleDollarSign,
-  ClipboardList,
-  Cog,
-  WalletCards,
-} from "lucide-react";
+import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { CircleDollarSign } from "lucide-react";
 import { getServerSession } from "next-auth";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-
-const menu = [
-  { href: "/dashboard", label: "Tableau de bord", icon: ChartNoAxesCombined },
-  { href: "/trades", label: "Trade", icon: ClipboardList },
-  { href: "/accounts", label: "Comptes", icon: WalletCards },
-  { href: "/settings", label: "Paramètres", icon: Cog },
-];
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -37,21 +24,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
               <p className="text-xs text-slate-400">Journal de trading</p>
             </div>
           </div>
-          <nav className="space-y-1 p-3">
-            {menu.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          <SidebarNav />
           <div className="border-t border-slate-800 p-3">
             <SignOutButton />
           </div>

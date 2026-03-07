@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Save, Settings2 } from "lucide-react";
+import { BellRing, Loader2, Save, Settings2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 type Preferences = {
@@ -128,7 +128,7 @@ export function PreferencesManager() {
 
             <div className="md:col-span-2 flex items-center gap-3">
               <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
-                <Save className="h-4 w-4" />
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {saving ? "Sauvegarde..." : "Sauvegarder"}
               </button>
               {message && <span className="text-sm text-slate-300">{message}</span>}

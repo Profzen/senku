@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -74,7 +75,8 @@ export function OnboardingTradeStep({ accountIdFromQuery }: Props) {
       <input value={pair} onChange={(event) => setPair(event.target.value.toUpperCase())} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
       <input type="number" step="0.01" value={resultDollar} onChange={(event) => setResultDollar(Number(event.target.value))} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" required />
       {error && <p className="text-xs text-rose-400">{error}</p>}
-      <button type="submit" disabled={loading} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60">
+        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {loading ? "Enregistrement..." : "Ajouter mon premier trade"}
       </button>
     </form>
