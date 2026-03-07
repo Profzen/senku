@@ -48,7 +48,7 @@ export function RegisterForm() {
         return;
       }
 
-      router.push("/onboarding/account");
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setError("Erreur réseau. Réessaie dans un instant.");
